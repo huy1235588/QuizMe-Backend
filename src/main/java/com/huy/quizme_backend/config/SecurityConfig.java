@@ -28,8 +28,8 @@ import java.util.List;
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
-    @Value("${cors.allowed-origins}")
-    private String allowedOrigins;
+    @Value("${allowed-origins}")
+    private String[] allowedOrigins;
 
     @Autowired
     private UserDetailsService userDetailsService;
@@ -74,7 +74,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         // Thiết lập các nguồn gốc, phương thức và header được phép
-        configuration.setAllowedOrigins(List.of(allowedOrigins.split(",")));
+        configuration.setAllowedOrigins(List.of(allowedOrigins));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);

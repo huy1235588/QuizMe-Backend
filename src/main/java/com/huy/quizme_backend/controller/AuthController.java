@@ -28,6 +28,7 @@ public class AuthController {
     public ResponseEntity<?> login(
             @Valid @RequestBody LoginRequest loginRequest
     ) {
+        System.out.println(loginRequest.getUsernameOrEmail());
         // Xác thực người dùng
         AuthResponse authResponse = authService.login(loginRequest);
 

@@ -94,12 +94,14 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         // Cấu hình chuỗi filter bảo mật
         http
+                .csrf(csrf -> csrf.disable()) // Tắt CSRF
                 .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Cấu hình CORS
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // Không sử dụng session
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll() // Cho phép tất cả truy cập vào /api/auth/** (đăng ký, đăng nhập)
+                        // Cho phép tất cả truy cập vào /api/auth/** (đăng ký, đăng nhập)
+                        .requestMatchers("/api/auth/**").permitAll()
 
                         // Thêm các endpoint public khác nếu có (vd: /api/questions/public, /api/default-avatars)
                         // .requestMatchers("/api/some-public-endpoint").permitAll()

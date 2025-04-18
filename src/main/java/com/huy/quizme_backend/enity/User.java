@@ -3,6 +3,7 @@ package com.huy.quizme_backend.enity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -12,7 +13,7 @@ import java.util.Collection;
 import java.util.Collections;
 
 @Entity
-@Table(name = "users",
+@Table(name = "user",  // đổi từ "users" thành "user"
         uniqueConstraints = {
                 @UniqueConstraint(columnNames = "username"),
                 @UniqueConstraint(columnNames = "email")
@@ -40,44 +41,42 @@ public class User implements UserDetails {
     @Column(name = "full_name", nullable = false, length = 100)
     private String fullName;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private Role role = Role.USER; // Mặc định là USER
+    @Column(name = "profile_image", length = 255)
+    private String profileImage;
 
-    @Column(name = "avatar_url", length = 255)
-    private String avatarUrl;
-
-    @Column(name = "avatar_type", length = 20)
-    private String avatarType = "DEFAULT";
-
-    @Column(name = "avatar_updated_at")
-    private LocalDateTime avatarUpdatedAt;
-
-    @CreationTimestamp // Tự động tạo thời gian khi tạo bản ghi
+    @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @CreationTimestamp
-    @Column(name = "updated_at")
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Column(name = "last_login")
+    private LocalDateTime lastLogin;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false, length = 20)
+    private Role role = Role.USER; // Mặc định là USER
+
+    @Column(name = "is_active", nullable = false)
+    private boolean isActive = true;
 
     // --- UserDetails methods ---
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Trả về quyền hạn của người dùng
         return Collections.singleton(new SimpleGrantedAuthority("ROLE_" + role.name()));
     }
 
     @Override
     public String getPassword() {
-        // Trả về mật khẩu của người dùng
+        // Trả về mật khẩu đã mã hóa
         return password;
     }
 
     @Override
     public String getUsername() {
-        // Trả về tên người dùng hoặc email
+        // Trả về tên đăng nhập
         return username;
     }
 
@@ -101,7 +100,7 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        // Tài khoản đã được kích hoạt
-        return true;
+        // Tài khoản có hoạt động hay không
+        return isActive;
     }
 }

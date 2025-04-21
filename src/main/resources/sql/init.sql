@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS user
     last_login    TIMESTAMP    NULL      DEFAULT NULL,
     role          ENUM ('ADMIN', 'USER') DEFAULT 'USER',
     is_active     BOOLEAN                DEFAULT TRUE,
+
     INDEX idx_username (username),
     INDEX idx_email (email)
 );
@@ -40,6 +41,7 @@ CREATE TABLE IF NOT EXISTS user_profile
     total_score     INT DEFAULT 0,
     quizzes_played  INT DEFAULT 0,
     quizzes_created INT DEFAULT 0,
+
     FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE,
     UNIQUE KEY unique_user_id (user_id)
 );
@@ -54,6 +56,7 @@ CREATE TABLE IF NOT EXISTS achievement
     icon_url    VARCHAR(255),
     achieved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
     FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE,
     INDEX idx_user_id (user_id)
 );
@@ -74,6 +77,23 @@ CREATE TABLE IF NOT EXISTS user_achievement
     INDEX idx_achievement_id (achievement_id)
 );
 
+-- Bảng refresh_token
+CREATE TABLE IF NOT EXISTS refresh_token
+(
+    id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id    BIGINT       NOT NULL,
+    token      VARCHAR(500) NOT NULL UNIQUE,
+    jti        VARCHAR(100) NOT NULL UNIQUE, -- JWT ID để định danh token duy nhất
+    issued_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    revoked    BOOLEAN      NOT NULL DEFAULT FALSE,
+
+    FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE,
+    INDEX idx_user_id (user_id),
+    INDEX idx_jti (jti),
+    INDEX idx_expires_at (expires_at)
+);
+
 -- Bảng category
 CREATE TABLE IF NOT EXISTS category
 (
@@ -83,6 +103,7 @@ CREATE TABLE IF NOT EXISTS category
     icon_url    VARCHAR(255),
     created_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP    NULL     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
     INDEX idx_category_name (name)
 );
 
@@ -98,6 +119,7 @@ CREATE TABLE IF NOT EXISTS quiz
     is_public   BOOLEAN                         DEFAULT TRUE,
     created_at  TIMESTAMP                       DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP                       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
     FOREIGN KEY (category_id) REFERENCES category (id) ON DELETE SET NULL,
     FOREIGN KEY (creator_id) REFERENCES user (id) ON DELETE CASCADE,
     INDEX idx_category_id (category_id),
@@ -118,6 +140,7 @@ CREATE TABLE IF NOT EXISTS question
     order_number INT    NOT NULL,
     created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
     FOREIGN KEY (quiz_id) REFERENCES quiz (id) ON DELETE CASCADE,
     INDEX idx_quiz_id (quiz_id),
     INDEX idx_order_number (order_number)
@@ -132,6 +155,7 @@ CREATE TABLE IF NOT EXISTS question_option
     is_correct  BOOLEAN   DEFAULT FALSE,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
     FOREIGN KEY (question_id) REFERENCES question (id) ON DELETE CASCADE,
     INDEX idx_question_id (question_id)
 );
@@ -146,6 +170,7 @@ CREATE TABLE IF NOT EXISTS saved_quiz
     last_played TIMESTAMP NULL DEFAULT NULL,
     created_at  TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
     FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE,
     FOREIGN KEY (quiz_id) REFERENCES quiz (id) ON DELETE CASCADE,
     UNIQUE KEY unique_user_quiz (user_id, quiz_id),
@@ -165,6 +190,7 @@ CREATE TABLE IF NOT EXISTS quiz_attempt
     completed_at    TIMESTAMP NULL DEFAULT NULL,
     is_completed    BOOLEAN        DEFAULT FALSE,
     created_at      TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
+
     FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE SET NULL,
     FOREIGN KEY (quiz_id) REFERENCES quiz (id) ON DELETE CASCADE,
     INDEX idx_user_id (user_id),
@@ -183,6 +209,7 @@ CREATE TABLE IF NOT EXISTS user_answer
     is_correct  BOOLEAN   DEFAULT FALSE,
     time_taken  INT,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
     FOREIGN KEY (attempt_id) REFERENCES quiz_attempt (id) ON DELETE CASCADE,
     FOREIGN KEY (question_id) REFERENCES question (id) ON DELETE CASCADE,
     FOREIGN KEY (option_id) REFERENCES question_option (id) ON DELETE SET NULL,
@@ -204,6 +231,7 @@ CREATE TABLE IF NOT EXISTS room
     end_time    TIMESTAMP   NULL                                          DEFAULT NULL,
     created_at  TIMESTAMP                                                 DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP                                                 DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
     FOREIGN KEY (quiz_id) REFERENCES quiz (id) ON DELETE CASCADE,
     FOREIGN KEY (host_id) REFERENCES user (id) ON DELETE CASCADE,
     INDEX idx_code (code),
@@ -223,6 +251,7 @@ CREATE TABLE IF NOT EXISTS room_participant
     left_at    TIMESTAMP NULL DEFAULT NULL,
     is_guest   BOOLEAN        DEFAULT FALSE,
     guest_name VARCHAR(50),
+
     FOREIGN KEY (room_id) REFERENCES room (id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE SET NULL,
     INDEX idx_room_id (room_id),
@@ -292,6 +321,8 @@ VALUES (1, 1, NOW()),
        (3, 3, NOW())
 ON DUPLICATE KEY UPDATE achieved_at = VALUES(achieved_at);
 -- Nếu user_achievement đã tồn tại thì cập nhật achieved_at
+
+-- === R
 
 -- === Category ===
 INSERT INTO category (name, description, icon_url)

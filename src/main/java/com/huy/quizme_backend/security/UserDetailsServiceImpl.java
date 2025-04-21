@@ -18,22 +18,16 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Override
     @Transactional // Đánh dấu phương thức này là giao dịch
     public UserDetails loadUserByUsername(String usernameOrEmail) throws UsernameNotFoundException {
-        // Tìm user bằng username hoặc email
-        User user = userRepository.findByUsernameOrEmail(usernameOrEmail, usernameOrEmail)
-                .orElseThrow(() -> new UsernameNotFoundException("User Not Found with username or email: " + usernameOrEmail));
-
         // Trả về đối tượng UserDetails
-        return user;
+        return userRepository.findByUsernameOrEmail(usernameOrEmail, usernameOrEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User Not Found with username or email: " + usernameOrEmail));
     }
 
     // JwtAuthenticationFilter sử dụng để load UserDetails từ ID (nếu cần)
     @Transactional
     public UserDetails loadUserById(Long id) {
-        // Tìm user bằng ID
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new UsernameNotFoundException("User Not Found with id: " + id));
-
         // Trả về đối tượng UserDetails
-        return user;
+        return userRepository.findById(id)
+                .orElseThrow(() -> new UsernameNotFoundException("User Not Found with id: " + id));
     }
 }

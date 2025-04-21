@@ -4,8 +4,10 @@ import com.huy.quizme_backend.dto.request.LoginRequest;
 import com.huy.quizme_backend.dto.request.RegisterRequest;
 import com.huy.quizme_backend.dto.response.AuthResponse;
 import com.huy.quizme_backend.dto.response.UserResponse;
+import com.huy.quizme_backend.enity.RefreshToken;
 import com.huy.quizme_backend.enity.Role;
 import com.huy.quizme_backend.enity.User;
+import com.huy.quizme_backend.repository.RefreshTokenRepository;
 import com.huy.quizme_backend.repository.UserRepository;
 import com.huy.quizme_backend.security.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
@@ -17,9 +19,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Date;
+import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
@@ -31,12 +34,16 @@ public class AuthService {
     private UserRepository userRepository;
 
     @Autowired
+    private RefreshTokenRepository refreshTokenRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
     private JwtTokenProvider tokenProvider;
 
     // Phương thức đăng nhập
+    @Transactional
     public AuthResponse login(LoginRequest loginRequest) {
         // Xác thực người dùng
         Authentication authentication = authenticationManager.authenticate(
@@ -49,27 +56,43 @@ public class AuthService {
         // Nếu xác thực thành công, set Authentication vào SecurityContext
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        // Tạo JWT token
-        String jwt = tokenProvider.generateToken(authentication);
+        // Lấy thông tin người dùng từ Authentication
+        User user = (User) authentication.getPrincipal();
 
-        // Lấy ngày hết hạn của token
-        Date expiryDate = tokenProvider.getExpirationDateFromJWT(jwt);
+        // Tạo JWT access token
+        String accessToken = tokenProvider.generateAccessToken(authentication);
+        // Lấy ngày hết hạn của access token
+        Instant accessExpiry = tokenProvider.getExpirationDateFromJWT(accessToken);
+        // Tạo JWT refresh token
+        String refreshToken = tokenProvider.generateRefreshToken(authentication);
+        // Lấy ngày hết hạn của refresh token
+        Instant refreshExpiry = tokenProvider.getExpirationDateFromJWT(refreshToken);
 
-        // Lấy User từ
-        String usernameOrEmail = loginRequest.getUsernameOrEmail();
-        User user = userRepository
-                .findByUsernameOrEmail(usernameOrEmail, usernameOrEmail)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        // Lấy JTI từ refresh token
+        String jti = tokenProvider.getJtiFromJWT(refreshToken);
 
-        // Kiểm tra xem người dùng có bị khóa hay không
-        if (!user.isActive()) {
-            throw new ResponseStatusException(HttpStatus.LOCKED, "User is not active");
-        }
+        // Lưu refresh token vào cơ sở dữ liệu
+        RefreshToken refreshTokenEntity = RefreshToken.builder()
+                .user(user)
+                .token(refreshToken)
+                .jti(jti)
+                .issuedAt(Instant.now())
+                .expiresAt(refreshExpiry)
+                .revoked(false)
+                .build();
+
+        // Xóa refresh token cũ nếu có
+        refreshTokenRepository.deleteByUser(user);
+
+        // Lưu refresh token mới vào cơ sở dữ liệu
+        refreshTokenRepository.save(refreshTokenEntity);
 
         // Trả về token
         return new AuthResponse(
-                jwt,
-                expiryDate,
+                accessToken,
+                accessExpiry,
+                refreshToken,
+                refreshExpiry,
                 UserResponse.toUserResponse(user)
         );
     }
@@ -101,10 +124,42 @@ public class AuthService {
                 .isActive(true) // Gán trạng thái hoạt động mặc định là true
                 .build();
 
-        // Lưu người dùng vào cơ sở dữ liệu
-        User saved = userRepository.save(user);
+        // Trả về người dùng đã lưu vào cơ sở dữ liệu
+        return UserResponse.toUserResponse(userRepository.save(user));
+    }
 
-        // Trả về người dùng đã lưu
-        return UserResponse.toUserResponse(saved);
+    // Phương thức đăng xuất
+    @Transactional
+    public void logout(String refreshToken) {
+        if (!refreshTokenRepository.existsByToken(refreshToken)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid refresh token");
+        }
+        refreshTokenRepository.deleteByToken(refreshToken);
+    }
+
+    // Phương thức làm mới token
+    public AuthResponse refreshToken(String refreshToken) {
+        // Kiểm tra tính hợp lệ của refresh token
+        RefreshToken token = refreshTokenRepository.findByToken(refreshToken)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token"));
+
+        // Kiểm tra xem refresh token có hết hạn không
+        if (token.getExpiresAt().isBefore(Instant.now())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Refresh token expired");
+        }
+
+        // Tạo mới access token
+        String accessToken = tokenProvider.generateAccessToken(token.getUser());
+        // Lấy ngày hết hạn của access token
+        Instant accessExpiry = tokenProvider.getExpirationDateFromJWT(accessToken);
+
+        // Trả về token mới
+        return new AuthResponse(
+                accessToken,
+                accessExpiry,
+                refreshToken,
+                token.getExpiresAt(),
+                UserResponse.toUserResponse(token.getUser())
+        );
     }
 }

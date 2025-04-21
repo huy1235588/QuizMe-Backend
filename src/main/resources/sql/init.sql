@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS user
     created_at    TIMESTAMP              DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMP              DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     last_login    TIMESTAMP    NULL      DEFAULT NULL,
-    role          ENUM ('admin', 'user') DEFAULT 'user',
+    role          ENUM ('ADMIN', 'USER') DEFAULT 'USER',
     is_active     BOOLEAN                DEFAULT TRUE,
     INDEX idx_username (username),
     INDEX idx_email (email)

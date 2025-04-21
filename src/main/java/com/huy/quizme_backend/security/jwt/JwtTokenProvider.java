@@ -76,6 +76,19 @@ public class JwtTokenProvider {
         return claims.getSubject();
     }
 
+    // Lấy ngày hết hạn từ JWT token
+    public Date getExpirationDateFromJWT(String token) {
+        // Lấy claims từ token
+        Claims claims = Jwts.parser()
+                .verifyWith(getSecretKey()) // Xác thực token bằng secret key
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        // Trả về ngày hết hạn từ claims
+        return claims.getExpiration();
+    }
+
     // Xác thực JWT token
     public boolean validateToken(String token) {
         try {

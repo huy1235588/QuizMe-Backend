@@ -60,7 +60,7 @@ public class User implements UserDetails {
     private Role role = Role.USER; // Mặc định là USER
 
     @Column(name = "is_active", nullable = false)
-    private boolean isActive = true;
+    private boolean isActive = true; // Mặc định là true
 
     // --- UserDetails methods ---
     @Override

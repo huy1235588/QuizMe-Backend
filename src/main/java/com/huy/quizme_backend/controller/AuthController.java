@@ -8,16 +8,15 @@ import com.huy.quizme_backend.dto.response.AuthResponse;
 import com.huy.quizme_backend.dto.response.UserResponse;
 import com.huy.quizme_backend.service.AuthService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
-
 @RestController
 @RequestMapping("/api/auth")
+@RequiredArgsConstructor
 public class AuthController {
-    @Autowired
-    private AuthService authService;
+    private final AuthService authService;
 
     // Phương thức đăng nhập
     @PostMapping("/login")

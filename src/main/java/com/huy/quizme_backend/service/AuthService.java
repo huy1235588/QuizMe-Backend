@@ -11,7 +11,6 @@ import com.huy.quizme_backend.repository.RefreshTokenRepository;
 import com.huy.quizme_backend.repository.UserRepository;
 import com.huy.quizme_backend.security.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -27,20 +26,11 @@ import java.time.Instant;
 @Service
 @RequiredArgsConstructor
 public class AuthService {
-    @Autowired
-    private AuthenticationManager authenticationManager;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private RefreshTokenRepository refreshTokenRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private JwtTokenProvider tokenProvider;
+    private final AuthenticationManager authenticationManager;
+    private final UserRepository userRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider tokenProvider;
 
     // Phương thức đăng nhập
     @Transactional

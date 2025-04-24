@@ -1,8 +1,7 @@
 package com.huy.quizme_backend.config;
 
 import com.huy.quizme_backend.security.jwt.JwtAuthenticationFilter;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -27,15 +26,11 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
+@RequiredArgsConstructor
 public class SecurityConfig {
-    @Value("${allowed-origins}")
-    private String[] allowedOrigins;
-
-    @Autowired
-    private UserDetailsService userDetailsService;
-
-    @Autowired
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final CorsProperties corsProperties;
+    private final UserDetailsService userDetailsService;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     // Bean để mã hóa mật khẩu
     @Bean
@@ -74,7 +69,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         // Thiết lập các nguồn gốc, phương thức và header được phép
-        configuration.setAllowedOrigins(List.of(allowedOrigins));
+        configuration.setAllowedOrigins(corsProperties.getAllowedOrigins());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
@@ -100,12 +95,11 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // Không sử dụng session
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // Cho phép tất cả truy cập vào /api/auth/** (đăng ký, đăng nhập)
-                        .requestMatchers("/api/auth/**").permitAll()
+                        // Cấu hình các endpoint được phép truy cập
+                        .requestMatchers("/api/auth/**", "/api/categories/**").permitAll()
 
-                        // Thêm các endpoint public khác nếu có (vd: /api/questions/public, /api/default-avatars)
-                        // .requestMatchers("/api/some-public-endpoint").permitAll()
-
+                        // Thêm các endpoint public khác nếu có
+                        // ...
                         .anyRequest().authenticated() // Tất cả các request khác đều cần xác thực
                 )
                 .authenticationProvider(authenticationProvider()) // Cung cấp AuthenticationProvider

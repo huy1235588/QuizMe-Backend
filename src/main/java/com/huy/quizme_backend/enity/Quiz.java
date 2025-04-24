@@ -54,6 +54,9 @@ public class Quiz {
     @Column(name = "play_count", nullable = false)
     private Integer playCount = 0;
 
+    @Column(name = "question_count", nullable = false)
+    private Integer questionCount = 0;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

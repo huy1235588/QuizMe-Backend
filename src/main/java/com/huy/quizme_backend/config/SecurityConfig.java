@@ -96,8 +96,7 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         // Cấu hình các endpoint được phép truy cập
-                        .requestMatchers("/api/auth/**", "/api/categories/**").permitAll()
-
+                        .requestMatchers("/api/auth/**", "/api/categories/**", "/api/quizzes/**", "/api/questions/**").permitAll()
                         // Thêm các endpoint public khác nếu có
                         // ...
                         .anyRequest().authenticated() // Tất cả các request khác đều cần xác thực

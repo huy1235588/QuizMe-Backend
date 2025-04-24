@@ -1,11 +1,13 @@
 -- *****************************************************************************
 -- 1. Category
 -- *****************************************************************************
-INSERT INTO category (id, name, description, icon_url)
+INSERT INTO category (id, name, description, icon_url, quiz_count, total_play_count)
 VALUES (1,
         'Geography',
         'Explore the world through geography questions, from countries, cities to natural wonders!',
-        'category_1_1745400000.png')
+        'category_1_1745400000.png',
+        1,
+        0)
 ON DUPLICATE KEY UPDATE name        = VALUES(name),
                         description = VALUES(description),
                         icon_url    = VALUES(icon_url);
@@ -14,7 +16,7 @@ ON DUPLICATE KEY UPDATE name        = VALUES(name),
 -- *****************************************************************************
 -- 2. Quiz
 -- *****************************************************************************
-INSERT INTO quiz (id, title, description, quiz_thumbnails, category_id, creator_id, difficulty, is_public)
+INSERT INTO quiz (id, title, description, quiz_thumbnails, category_id, creator_id, difficulty, is_public, play_count, question_count)
 VALUES (1,
         'Flags of World Quiz',
         'Guess the country based on the displayed national flag.',
@@ -22,7 +24,9 @@ VALUES (1,
         1,
         3, -- lehuy
         'medium',
-        true)
+        true,
+        0,
+        20)
 ON DUPLICATE KEY UPDATE title       = VALUES(title),
                         description = VALUES(description),
                         category_id = VALUES(category_id),
@@ -326,6 +330,6 @@ VALUES
     (20, 'Azerbaijan', FALSE),
     (20, 'Greece', FALSE)
 ON DUPLICATE KEY UPDATE question_id = VALUES(question_id),
-                        content      = VALUES(content),
-                        is_correct   = VALUES(is_correct);
+                        content     = VALUES(content),
+                        is_correct  = VALUES(is_correct);
 -- Nếu question_option đã tồn tại, cập nhật question_id, content và is_correct

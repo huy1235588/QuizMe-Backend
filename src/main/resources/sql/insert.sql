@@ -1,22 +1,30 @@
 -- *****************************************************************************
 -- 1. Category
 -- *****************************************************************************
-INSERT INTO category (id, name, description, icon_url, quiz_count, total_play_count)
+INSERT INTO category (id, name, description, icon_url, quiz_count, total_play_count, is_active)
 VALUES (1,
         'Geography',
         'Explore the world through geography questions, from countries, cities to natural wonders!',
         'category_1_1745400000.png',
         1,
-        0)
-ON DUPLICATE KEY UPDATE name        = VALUES(name),
-                        description = VALUES(description),
-                        icon_url    = VALUES(icon_url);
+        0,
+        true)
+ON DUPLICATE KEY UPDATE name             = VALUES(name),
+                        description      = VALUES(description),
+                        icon_url         = VALUES(icon_url),
+                        quiz_count       =
+                            VALUES(quiz_count),
+                        total_play_count =
+                            VALUES(total_play_count),
+                        is_active        =
+                            VALUES(is_active);
 -- Nếu category đã tồn tại, cập nhật description và icon_url
 
 -- *****************************************************************************
 -- 2. Quiz
 -- *****************************************************************************
-INSERT INTO quiz (id, title, description, quiz_thumbnails, category_id, creator_id, difficulty, is_public, play_count, question_count)
+INSERT INTO quiz (id, title, description, quiz_thumbnails, category_id, creator_id, difficulty, is_public, play_count,
+                  question_count)
 VALUES (1,
         'Flags of World Quiz',
         'Guess the country based on the displayed national flag.',

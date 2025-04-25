@@ -104,6 +104,7 @@ CREATE TABLE IF NOT EXISTS category
     icon_url         VARCHAR(255),
     quiz_count       INT                   DEFAULT 0,
     total_play_count INT                   DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
 
     created_at       TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at       TIMESTAMP    NULL     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

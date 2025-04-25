@@ -17,6 +17,7 @@ public class CategoryResponse {
     private String iconUrl;
     private Integer quizCount;
     private Integer totalPlayCount;
+    private Boolean isActive;
     private String createdAt;
     private String updatedAt;
     
@@ -29,6 +30,7 @@ public class CategoryResponse {
                 .iconUrl(category.getIconUrl())
                 .quizCount(category.getQuizCount())
                 .totalPlayCount(category.getTotalPlayCount())
+                .isActive(category.getIsActive())
                 .createdAt(category.getCreatedAt().toString())
                 .updatedAt(category.getUpdatedAt() != null ? category.getUpdatedAt().toString() : null)
                 .build();

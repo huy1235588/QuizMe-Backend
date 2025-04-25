@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class QuizService {
     private final QuizRepository quizRepository;
+    private final CloudinaryService cloudinaryService;
 
     /**
      * Lấy danh sách tất cả các quiz
@@ -25,7 +26,7 @@ public class QuizService {
     public List<QuizResponse> getAllQuizzes() {
         return quizRepository.findAll().
                 stream()
-                .map(QuizResponse::fromQuiz)
+                .map(quiz -> QuizResponse.fromQuiz(quiz, cloudinaryService))
                 .collect(Collectors.toList());
     }
 
@@ -39,7 +40,7 @@ public class QuizService {
         Quiz quiz = quizRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Quiz not found with id: " + id));
-        return QuizResponse.fromQuiz(quiz);
+        return QuizResponse.fromQuiz(quiz, cloudinaryService);
     }
 
     /**
@@ -50,7 +51,7 @@ public class QuizService {
     public List<QuizResponse> getPublicQuizzes() {
         return quizRepository.findByIsPublicTrue()
                 .stream()
-                .map(QuizResponse::fromQuiz)
+                .map(quiz -> QuizResponse.fromQuiz(quiz, cloudinaryService))
                 .collect(Collectors.toList());
     }
 
@@ -63,7 +64,16 @@ public class QuizService {
     public List<QuizResponse> getQuizzesByDifficulty(Difficulty difficulty) {
         return quizRepository.findByDifficulty(difficulty)
                 .stream()
-                .map(QuizResponse::fromQuiz)
+                .map(quiz -> QuizResponse.fromQuiz(quiz, cloudinaryService))
                 .collect(Collectors.toList());
+    }
+    
+    /**
+     * Tạo tên file thumbnail cho quiz theo định dạng quy định
+     * @param quizId ID của quiz
+     * @return Tên file theo quy tắc
+     */
+    public String generateQuizThumbnailFilename(Long quizId) {
+        return cloudinaryService.generateQuizThumbnailFilename(quizId);
     }
 }

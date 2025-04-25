@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CategoryService {
     private final CategoryRepository categoryRepository;
+    private final CloudinaryService cloudinaryService;
     
     /**
      * Lấy danh sách tất cả các danh mục
@@ -24,7 +25,7 @@ public class CategoryService {
      */
     public List<CategoryResponse> getAllCategories() {
         return categoryRepository.findAll().stream()
-                .map(CategoryResponse::fromCategory)
+                .map(category -> CategoryResponse.fromCategory(category, cloudinaryService))
                 .collect(Collectors.toList());
     }
     
@@ -37,7 +38,7 @@ public class CategoryService {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Category not found with id: " + id));
-        return CategoryResponse.fromCategory(category);
+        return CategoryResponse.fromCategory(category, cloudinaryService);
     }
     
     /**
@@ -67,7 +68,7 @@ public class CategoryService {
         Category savedCategory = categoryRepository.save(category);
         
         // Trả về response
-        return CategoryResponse.fromCategory(savedCategory);
+        return CategoryResponse.fromCategory(savedCategory, cloudinaryService);
     }
     
     /**
@@ -100,7 +101,16 @@ public class CategoryService {
         Category updatedCategory = categoryRepository.save(category);
         
         // Trả về response
-        return CategoryResponse.fromCategory(updatedCategory);
+        return CategoryResponse.fromCategory(updatedCategory, cloudinaryService);
+    }
+    
+    /**
+     * Tạo tên file icon cho danh mục theo định dạng quy định
+     * @param categoryId ID của danh mục
+     * @return Tên file theo quy tắc
+     */
+    public String generateCategoryIconFilename(Long categoryId) {
+        return cloudinaryService.generateCategoryIconFilename(categoryId);
     }
     
     /**

@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 public class QuestionService {
     private final QuestionRepository questionRepository;
     private final QuestionOptionRepository questionOptionRepository;
+    private final CloudinaryService cloudinaryService;
     
     /**
      * Lấy danh sách tất cả các câu hỏi
@@ -43,7 +44,7 @@ public class QuestionService {
         return questions.stream()
                 .map(question -> {
                     List<QuestionOption> options = optionsByQuestionId.get(question.getId());
-                    return QuestionResponse.fromQuestionWithOptions(question, options);
+                    return QuestionResponse.fromQuestionWithOptions(question, options, cloudinaryService);
                 })
                 .collect(Collectors.toList());
     }
@@ -60,7 +61,7 @@ public class QuestionService {
         
         List<QuestionOption> options = questionOptionRepository.findByQuestionId(id);
         
-        return QuestionResponse.fromQuestionWithOptions(question, options);
+        return QuestionResponse.fromQuestionWithOptions(question, options, cloudinaryService);
     }
     
     /**
@@ -92,8 +93,18 @@ public class QuestionService {
         return questions.stream()
                 .map(question -> {
                     List<QuestionOption> options = optionsByQuestionId.get(question.getId());
-                    return QuestionResponse.fromQuestionWithOptions(question, options);
+                    return QuestionResponse.fromQuestionWithOptions(question, options, cloudinaryService);
                 })
                 .collect(Collectors.toList());
+    }
+    
+    /**
+     * Tạo tên file hình ảnh cho câu hỏi theo định dạng quy định
+     * @param quizId ID của quiz
+     * @param questionId ID của câu hỏi
+     * @return Tên file theo quy tắc
+     */
+    public String generateQuestionImageFilename(Long quizId, Long questionId) {
+        return cloudinaryService.generateQuestionImageFilename(quizId, questionId);
     }
 }

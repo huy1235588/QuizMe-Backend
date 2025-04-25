@@ -1,6 +1,7 @@
 package com.huy.quizme_backend.dto.response;
 
 import com.huy.quizme_backend.enity.Category;
+import com.huy.quizme_backend.service.CloudinaryService;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -34,5 +35,14 @@ public class CategoryResponse {
                 .createdAt(category.getCreatedAt().toString())
                 .updatedAt(category.getUpdatedAt() != null ? category.getUpdatedAt().toString() : null)
                 .build();
+    }
+    
+    // Chuyển đổi từ Category entity sang CategoryResponse DTO với Cloudinary URL
+    public static CategoryResponse fromCategory(Category category, CloudinaryService cloudinaryService) {
+        CategoryResponse response = fromCategory(category);
+        if (category.getIconUrl() != null && !category.getIconUrl().isEmpty()) {
+            response.setIconUrl(cloudinaryService.getCategoryIconUrl(category.getIconUrl()));
+        }
+        return response;
     }
 }

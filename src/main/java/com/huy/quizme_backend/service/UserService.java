@@ -11,6 +11,7 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
+    private final CloudinaryService cloudinaryService;
 
     /**
      * Lấy thông tin người dùng theo ID
@@ -20,7 +21,7 @@ public class UserService {
      */
     public UserResponse getUserById(Long id) {
         return userRepository.findById(id)
-                .map(UserResponse::fromUser)
+                .map(user -> UserResponse.fromUser(user, cloudinaryService))
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "User not found with id: " + id));
     }
@@ -32,5 +33,14 @@ public class UserService {
      */
     public long countUsers() {
         return userRepository.count();
+    }
+    
+    /**
+     * Tạo tên file ảnh đại diện theo định dạng quy định
+     * @param profileId ID của profile người dùng
+     * @return Tên file theo quy tắc
+     */
+    public String generateProfileImageFilename(Long profileId) {
+        return cloudinaryService.generateProfileImageFilename(profileId);
     }
 }

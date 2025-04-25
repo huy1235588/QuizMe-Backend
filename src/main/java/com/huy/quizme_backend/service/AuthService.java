@@ -31,6 +31,7 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider tokenProvider;
+    private final CloudinaryService cloudinaryService;
 
     // Phương thức đăng nhập
     @Transactional
@@ -77,13 +78,13 @@ public class AuthService {
         // Lưu refresh token mới vào cơ sở dữ liệu
         refreshTokenRepository.save(refreshTokenEntity);
 
-        // Trả về token
+        // Trả về token với chuyển đổi Cloudinary URL cho ảnh đại diện
         return new AuthResponse(
                 accessToken,
                 accessExpiry,
                 refreshToken,
                 refreshExpiry,
-                UserResponse.fromUser(user)
+                UserResponse.fromUser(user, cloudinaryService)
         );
     }
 
@@ -114,8 +115,8 @@ public class AuthService {
                 .isActive(true) // Gán trạng thái hoạt động mặc định là true
                 .build();
 
-        // Trả về người dùng đã lưu vào cơ sở dữ liệu
-        return UserResponse.fromUser(userRepository.save(user));
+        // Trả về người dùng đã lưu vào cơ sở dữ liệu với chuyển đổi Cloudinary URL
+        return UserResponse.fromUser(userRepository.save(user), cloudinaryService);
     }
 
     // Phương thức đăng xuất
@@ -143,13 +144,13 @@ public class AuthService {
         // Lấy ngày hết hạn của access token
         Instant accessExpiry = tokenProvider.getExpirationDateFromJWT(accessToken);
 
-        // Trả về token mới
+        // Trả về token mới với chuyển đổi Cloudinary URL
         return new AuthResponse(
                 accessToken,
                 accessExpiry,
                 refreshToken,
                 token.getExpiresAt(),
-                UserResponse.fromUser(token.getUser())
+                UserResponse.fromUser(token.getUser(), cloudinaryService)
         );
     }
 }

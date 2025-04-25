@@ -5,7 +5,7 @@ INSERT INTO category (id, name, description, icon_url, quiz_count, total_play_co
 VALUES (1,
         'Geography',
         'Explore the world through geography questions, from countries, cities to natural wonders!',
-        'category_1_1745400000.png',
+        'category_1_1745400000.svg',
         1,
         0,
         true)

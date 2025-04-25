@@ -67,10 +67,11 @@ public class CloudinaryService {
      * @return URL đầy đủ
      */
     private String buildCloudinaryUrl(String folder, String filename) {
-        return String.format("%s%s/%s/%s",
+        return String.format("%s%s/%s/%s/%s",
                 cloudinaryConfig.getBaseUrl(),
                 cloudinaryConfig.getCloudName(),
                 "image/upload",
+                folder,
                 filename);
     }
     

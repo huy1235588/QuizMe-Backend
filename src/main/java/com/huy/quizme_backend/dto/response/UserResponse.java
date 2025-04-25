@@ -24,7 +24,7 @@ public class UserResponse {
     private boolean isActive;
 
     // Map từ User entity sang UserResponse DTO
-    public static UserResponse toUserResponse(User user) {
+    public static UserResponse fromUser(User user) {
         return UserResponse.builder()
                 .id(user.getId())
                 .username(user.getUsername())
@@ -39,19 +39,19 @@ public class UserResponse {
                 .build();
     }
 
-    // Map từ UserResponse DTO sang User entity
-    public User toUser() {
+    // Chuyển đổi từ UserResponse DTO sang User entity
+    public static User toUser(UserResponse userResponse) {
         return User.builder()
-                .id(this.id)
-                .username(this.username)
-                .email(this.email)
-                .fullName(this.fullName)
-                .profileImage(this.profileImage)
-                .createdAt(this.createdAt != null ? java.time.LocalDateTime.parse(this.createdAt) : null)
-                .updatedAt(this.updatedAt != null ? java.time.LocalDateTime.parse(this.updatedAt) : null)
-                .lastLogin(this.lastLogin != null ? java.time.LocalDateTime.parse(this.lastLogin) : null)
-                .role(this.role)
-                .isActive(this.isActive)
+                .id(userResponse.getId())
+                .username(userResponse.getUsername())
+                .email(userResponse.getEmail())
+                .fullName(userResponse.getFullName())
+                .profileImage(userResponse.getProfileImage())
+                .createdAt(java.time.LocalDateTime.parse(userResponse.getCreatedAt()))
+                .updatedAt(java.time.LocalDateTime.parse(userResponse.getUpdatedAt()))
+                .lastLogin(userResponse.getLastLogin() != null ? java.time.LocalDateTime.parse(userResponse.getLastLogin()) : null)
+                .role(userResponse.getRole())
+                .isActive(userResponse.isActive())
                 .build();
     }
 }

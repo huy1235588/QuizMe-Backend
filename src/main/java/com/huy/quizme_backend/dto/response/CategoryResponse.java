@@ -20,7 +20,7 @@ public class CategoryResponse {
     private String createdAt;
     private String updatedAt;
     
-    // Map từ Category entity sang CategoryResponse DTO
+    // Chuyển đổi từ Category entity sang CategoryResponse DTO
     public static CategoryResponse fromCategory(Category category) {
         return CategoryResponse.builder()
                 .id(category.getId())

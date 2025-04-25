@@ -83,7 +83,7 @@ public class AuthService {
                 accessExpiry,
                 refreshToken,
                 refreshExpiry,
-                UserResponse.toUserResponse(user)
+                UserResponse.fromUser(user)
         );
     }
 
@@ -115,7 +115,7 @@ public class AuthService {
                 .build();
 
         // Trả về người dùng đã lưu vào cơ sở dữ liệu
-        return UserResponse.toUserResponse(userRepository.save(user));
+        return UserResponse.fromUser(userRepository.save(user));
     }
 
     // Phương thức đăng xuất
@@ -149,7 +149,7 @@ public class AuthService {
                 accessExpiry,
                 refreshToken,
                 token.getExpiresAt(),
-                UserResponse.toUserResponse(token.getUser())
+                UserResponse.fromUser(token.getUser())
         );
     }
 }

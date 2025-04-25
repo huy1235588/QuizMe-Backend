@@ -27,7 +27,7 @@ public class QuizResponse {
     private String createdAt;
     private String updatedAt;
 
-    /// Chuyển đổi từ Quiz entity sang QuizResponse DTO
+    // Chuyển đổi từ Quiz entity sang QuizResponse DTO
     public static QuizResponse fromQuiz(Quiz quiz) {
         return QuizResponse.builder()
                 .id(quiz.getId())

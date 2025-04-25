@@ -26,6 +26,24 @@ services:
     networks:
       - quizme-network
 
+  # Dịch vụ phpMyAdmin
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: ${PHPMYADMIN_CONTAINER_NAME:-quizme-phpmyadmin}
+    environment:
+      PMA_HOST: ${MYSQL_HOST:-mysql}
+      PMA_PORT: ${MYSQL_CONTAINER_PORT:-3306}
+      PMA_USER: ${MYSQL_USER:-root}
+      PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD:-''}
+      UPLOAD_LIMIT: ${PHPMYADMIN_UPLOAD_LIMIT:-100M}
+    ports:
+      - "${PHPMYADMIN_PORT:-8081}:80"
+    depends_on:
+      - mysql
+    restart: unless-stopped
+    networks:
+      - quizme-network
+
   # Dịch vụ ứng dụng Spring Boot
   app:
     build: 

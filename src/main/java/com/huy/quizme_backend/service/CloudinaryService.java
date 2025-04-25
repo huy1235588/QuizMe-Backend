@@ -14,7 +14,7 @@ public class CloudinaryService {
     
     /**
      * Tạo URL đầy đủ cho ảnh đại diện của người dùng
-     * @param filename Tên file được lưu trong database (ví dụ: profile_123_1680000000.jpg)
+     * @param filename Tên file được lưu trong database (ví dụ: profile_42_1714182765.jpg)
      * @return URL đầy đủ của Cloudinary
      */
     public String getProfileImageUrl(String filename) {
@@ -26,7 +26,7 @@ public class CloudinaryService {
     
     /**
      * Tạo URL đầy đủ cho ảnh thumbnail của quiz
-     * @param filename Tên file được lưu trong database
+     * @param filename Tên file được lưu trong database (ví dụ: quiz_thumbnail_123_1714182765.jpg)
      * @return URL đầy đủ của Cloudinary
      */
     public String getQuizThumbnailUrl(String filename) {
@@ -38,7 +38,7 @@ public class CloudinaryService {
     
     /**
      * Tạo URL đầy đủ cho ảnh của câu hỏi
-     * @param filename Tên file được lưu trong database
+     * @param filename Tên file được lưu trong database (ví dụ: quiz_123_question_5_1714182765.jpg)
      * @return URL đầy đủ của Cloudinary
      */
     public String getQuestionImageUrl(String filename) {
@@ -50,7 +50,7 @@ public class CloudinaryService {
     
     /**
      * Tạo URL đầy đủ cho icon của danh mục
-     * @param filename Tên file được lưu trong database
+     * @param filename Tên file được lưu trong database (ví dụ: category_8_1714182765.jpg)
      * @return URL đầy đủ của Cloudinary
      */
     public String getCategoryIconUrl(String filename) {

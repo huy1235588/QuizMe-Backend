@@ -60,6 +60,7 @@ public class CategoryService {
                 .iconUrl(categoryRequest.getIconUrl())
                 .quizCount(0)
                 .totalPlayCount(0)
+                .isActive(true)
                 .build();
         
         // Lưu vào database
@@ -93,6 +94,7 @@ public class CategoryService {
         category.setName(categoryRequest.getName());
         category.setDescription(categoryRequest.getDescription());
         category.setIconUrl(categoryRequest.getIconUrl());
+        category.setIsActive(categoryRequest.getIsActive());
         
         // Lưu vào database
         Category updatedCategory = categoryRepository.save(category);

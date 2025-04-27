@@ -339,4 +339,20 @@ public class CloudinaryService {
         
         return deleteFile(filename, cloudinaryConfig.getQuizThumbnailsFolder());
     }
+    
+    /**
+     * Xóa ảnh của câu hỏi từ Cloudinary
+     * 
+     * @param imageUrl URL hoặc tên file của ảnh câu hỏi
+     * @return true nếu xóa thành công, false nếu có lỗi
+     */
+    public boolean deleteQuestionImage(String imageUrl) {
+        // Nếu là URL đầy đủ, trích xuất tên file
+        String filename = imageUrl;
+        if (imageUrl != null && imageUrl.contains("/")) {
+            filename = imageUrl.substring(imageUrl.lastIndexOf("/") + 1);
+        }
+        
+        return deleteFile(filename, cloudinaryConfig.getQuestionImagesFolder());
+    }
 }

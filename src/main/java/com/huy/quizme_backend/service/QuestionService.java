@@ -5,7 +5,6 @@ import com.huy.quizme_backend.dto.response.QuestionResponse;
 import com.huy.quizme_backend.enity.Question;
 import com.huy.quizme_backend.enity.QuestionOption;
 import com.huy.quizme_backend.enity.Quiz;
-import com.huy.quizme_backend.repository.QuestionOptionRepository;
 import com.huy.quizme_backend.repository.QuestionRepository;
 import com.huy.quizme_backend.repository.QuizRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -23,9 +21,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class QuestionService {
     private final QuestionRepository questionRepository;
-    private final QuestionOptionRepository questionOptionRepository;
     private final QuizRepository quizRepository;
     private final CloudinaryService cloudinaryService;
+    private final QuestionOptionService questionOptionService;
     
     /**
      * Lấy danh sách tất cả các câu hỏi
@@ -40,11 +38,10 @@ public class QuestionService {
                 .collect(Collectors.toList());
         
         // Lấy tất cả options cho các câu hỏi
-        List<QuestionOption> allOptions = questionOptionRepository.findByQuestionIdIn(questionIds);
+        List<QuestionOption> allOptions = questionOptionService.getOptionsByQuestionIds(questionIds);
         
         // Nhóm options theo questionId
-        Map<Long, List<QuestionOption>> optionsByQuestionId = allOptions.stream()
-                .collect(Collectors.groupingBy(option -> option.getQuestion().getId()));
+        Map<Long, List<QuestionOption>> optionsByQuestionId = questionOptionService.groupOptionsByQuestionId(allOptions);
         
         // Chuyển đổi các câu hỏi thành QuestionResponse kèm theo options
         return questions.stream()
@@ -65,7 +62,7 @@ public class QuestionService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Question not found with id: " + id));
         
-        List<QuestionOption> options = questionOptionRepository.findByQuestionId(id);
+        List<QuestionOption> options = questionOptionService.getOptionsByQuestionId(id);
         
         return QuestionResponse.fromQuestionWithOptions(question, options, cloudinaryService);
     }
@@ -89,11 +86,10 @@ public class QuestionService {
                 .collect(Collectors.toList());
         
         // Lấy tất cả options cho các câu hỏi
-        List<QuestionOption> allOptions = questionOptionRepository.findByQuestionIdIn(questionIds);
+        List<QuestionOption> allOptions = questionOptionService.getOptionsByQuestionIds(questionIds);
         
         // Nhóm options theo questionId
-        Map<Long, List<QuestionOption>> optionsByQuestionId = allOptions.stream()
-                .collect(Collectors.groupingBy(option -> option.getQuestion().getId()));
+        Map<Long, List<QuestionOption>> optionsByQuestionId = questionOptionService.groupOptionsByQuestionId(allOptions);
         
         // Chuyển đổi các câu hỏi thành QuestionResponse kèm theo options
         return questions.stream()
@@ -156,28 +152,8 @@ public class QuestionService {
         }
         
         // Tạo và lưu các lựa chọn cho câu hỏi
-        List<QuestionOption> savedOptions = new ArrayList<>();
-        if (questionRequest.getOptions() != null && !questionRequest.getOptions().isEmpty()) {
-            // Kiểm tra xem có ít nhất một lựa chọn đúng
-            boolean hasCorrectOption = questionRequest.getOptions().stream()
-                    .anyMatch(QuestionRequest.QuestionOptionRequest::getIsCorrect);
-            
-            if (!hasCorrectOption) {
-                throw new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST, "Question must have at least one correct option");
-            }
-            
-            // Tạo và lưu các lựa chọn
-            for (QuestionRequest.QuestionOptionRequest optionRequest : questionRequest.getOptions()) {
-                QuestionOption option = QuestionOption.builder()
-                        .question(savedQuestion)
-                        .content(optionRequest.getContent())
-                        .isCorrect(optionRequest.getIsCorrect())
-                        .build();
-                
-                savedOptions.add(questionOptionRepository.save(option));
-            }
-        }
+        List<QuestionOption> savedOptions = questionOptionService.createOptionsForQuestion(
+                savedQuestion, questionRequest.getOptions());
         
         // Cập nhật số lượng câu hỏi trong quiz
         quiz.setQuestionCount(quiz.getQuestionCount() + 1);
@@ -254,33 +230,9 @@ public class QuestionService {
         // Lưu câu hỏi vào database
         Question updatedQuestion = questionRepository.save(question);
         
-        // Xóa tất cả các lựa chọn cũ
-        List<QuestionOption> oldOptions = questionOptionRepository.findByQuestionId(id);
-        questionOptionRepository.deleteAll(oldOptions);
-        
-        // Tạo và lưu các lựa chọn mới
-        List<QuestionOption> newOptions = new ArrayList<>();
-        if (questionRequest.getOptions() != null && !questionRequest.getOptions().isEmpty()) {
-            // Kiểm tra xem có ít nhất một lựa chọn đúng
-            boolean hasCorrectOption = questionRequest.getOptions().stream()
-                    .anyMatch(QuestionRequest.QuestionOptionRequest::getIsCorrect);
-            
-            if (!hasCorrectOption) {
-                throw new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST, "Question must have at least one correct option");
-            }
-            
-            // Tạo và lưu các lựa chọn mới
-            for (QuestionRequest.QuestionOptionRequest optionRequest : questionRequest.getOptions()) {
-                QuestionOption option = QuestionOption.builder()
-                        .question(updatedQuestion)
-                        .content(optionRequest.getContent())
-                        .isCorrect(optionRequest.getIsCorrect())
-                        .build();
-                
-                newOptions.add(questionOptionRepository.save(option));
-            }
-        }
+        // Cập nhật các options cho câu hỏi
+        List<QuestionOption> newOptions = questionOptionService.updateOptionsForQuestion(
+                updatedQuestion, questionRequest.getOptions());
         
         // Trả về response
         return QuestionResponse.fromQuestionWithOptions(updatedQuestion, newOptions, cloudinaryService);
@@ -308,8 +260,7 @@ public class QuestionService {
         }
         
         // Xóa tất cả các lựa chọn của câu hỏi
-        List<QuestionOption> options = questionOptionRepository.findByQuestionId(id);
-        questionOptionRepository.deleteAll(options);
+        questionOptionService.deleteAllOptionsForQuestion(id);
         
         // Xóa câu hỏi từ database
         questionRepository.deleteById(id);

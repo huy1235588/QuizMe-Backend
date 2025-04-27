@@ -1,6 +1,7 @@
 package com.huy.quizme_backend.controller;
 
 import com.huy.quizme_backend.dto.response.ApiResponse;
+import com.huy.quizme_backend.dto.response.PageResponse;
 import com.huy.quizme_backend.dto.response.QuizResponse;
 import com.huy.quizme_backend.enity.Difficulty;
 import com.huy.quizme_backend.service.QuizService;
@@ -60,5 +61,35 @@ public class QuizController {
     public ApiResponse<List<QuizResponse>> getQuizzesByDifficulty(@PathVariable Difficulty difficulty) {
         List<QuizResponse> quizzes = quizService.getQuizzesByDifficulty(difficulty);
         return ApiResponse.success(quizzes, "Quizzes by difficulty retrieved successfully");
+    }
+    
+    /**
+     * API lấy danh sách các quiz theo phân trang và lọc
+     * @param page Số trang (bắt đầu từ 0)
+     * @param pageSize Số lượng kết quả mỗi trang
+     * @param category ID của category cần lọc
+     * @param search Từ khóa tìm kiếm
+     * @param difficulty Độ khó của quiz
+     * @param sort Cách sắp xếp kết quả (newest, popular)
+     * @param isPublic Trạng thái công khai
+     * @param tab Tab hiện tại (newest, popular)
+     * @return Danh sách các QuizResponse theo trang
+     */
+    @GetMapping("/paged")
+    @ResponseStatus(HttpStatus.OK)
+    public ApiResponse<PageResponse<QuizResponse>> getPagedQuizzes(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(required = false) Long category,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Difficulty difficulty,
+            @RequestParam(required = false) String sort,
+            @RequestParam(required = false) Boolean isPublic,
+            @RequestParam(required = false) String tab) {
+            
+        PageResponse<QuizResponse> pagedQuizzes = quizService.getPagedQuizzes(
+                page, pageSize, category, search, difficulty, sort, isPublic, tab);
+                
+        return ApiResponse.success(pagedQuizzes, "Paged quizzes retrieved successfully");
     }
 }

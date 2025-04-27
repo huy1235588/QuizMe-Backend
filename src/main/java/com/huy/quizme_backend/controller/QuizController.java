@@ -1,14 +1,20 @@
 package com.huy.quizme_backend.controller;
 
+import com.huy.quizme_backend.dto.request.QuizRequest;
 import com.huy.quizme_backend.dto.response.ApiResponse;
 import com.huy.quizme_backend.dto.response.PageResponse;
 import com.huy.quizme_backend.dto.response.QuizResponse;
 import com.huy.quizme_backend.enity.Difficulty;
+import com.huy.quizme_backend.enity.User;
 import com.huy.quizme_backend.service.QuizService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 
 @RestController
@@ -91,5 +97,70 @@ public class QuizController {
                 page, pageSize, category, search, difficulty, sort, isPublic, tab);
                 
         return ApiResponse.success(pagedQuizzes, "Paged quizzes retrieved successfully");
+    }
+
+    /**
+     * API tạo mới quiz
+     * @param quizRequest Thông tin quiz cần tạo
+     * @param principal Thông tin người dùng hiện tại
+     * @return QuizResponse của quiz đã tạo
+     */
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<QuizResponse> createQuiz(
+            @ModelAttribute @Valid QuizRequest quizRequest,
+            Principal principal) {
+        // Lấy user hiện tại
+        User currentUser = (User) ((Authentication) principal).getPrincipal();
+        Long creatorId = currentUser.getId();
+        
+        // Tạo quiz mới
+        QuizResponse createdQuiz = quizService.createQuiz(quizRequest, creatorId);
+        
+        return ApiResponse.created(createdQuiz, "Quiz created successfully");
+    }
+
+    /**
+     * API cập nhật thông tin quiz
+     * @param id ID của quiz cần cập nhật
+     * @param quizRequest Thông tin mới của quiz
+     * @param principal Thông tin người dùng hiện tại
+     * @return QuizResponse của quiz đã cập nhật
+     */
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.OK)
+    public ApiResponse<QuizResponse> updateQuiz(
+            @PathVariable Long id,
+            @ModelAttribute @Valid QuizRequest quizRequest,
+            Principal principal) {
+        // Lấy user hiện tại
+        User currentUser = (User) ((Authentication) principal).getPrincipal();
+        Long currentUserId = currentUser.getId();
+        
+        // Cập nhật quiz
+        QuizResponse updatedQuiz = quizService.updateQuiz(id, quizRequest, currentUserId);
+        
+        return ApiResponse.success(updatedQuiz, "Quiz updated successfully");
+    }
+
+    /**
+     * API xóa quiz
+     * @param id ID của quiz cần xóa
+     * @param principal Thông tin người dùng hiện tại
+     * @return Thông báo xóa thành công
+     */
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    public ApiResponse<Void> deleteQuiz(
+            @PathVariable Long id,
+            Principal principal) {
+        // Lấy user hiện tại
+        User currentUser = (User) ((Authentication) principal).getPrincipal();
+        Long currentUserId = currentUser.getId();
+        
+        // Xóa quiz
+        quizService.deleteQuiz(id, currentUserId);
+        
+        return ApiResponse.success(null, "Quiz deleted successfully");
     }
 }

@@ -105,9 +105,12 @@ public class CategoryService {
                     HttpStatus.CONFLICT, "Category with name '" + categoryRequest.getName() + "' already exists");
         }
 
-        // Nếu có file icon mới, tải lên Cloudinary
+        // Nếu có file icon mới, tải lên Cloudinary và xóa icon cũ
         if (categoryRequest.getIconFile() != null && !categoryRequest.getIconFile().isEmpty()) {
-            // Tải lên Cloudinary và lấy tên file
+            // Lưu URL icon cũ để xóa sau khi upload thành công
+            String oldIconUrl = category.getIconUrl();
+            
+            // Tải lên Cloudinary và lấy tên file mới
             String iconUrl = cloudinaryService.uploadCategoryIcon(
                     categoryRequest.getIconFile(),
                     category.getId()
@@ -115,6 +118,11 @@ public class CategoryService {
 
             // Cập nhật URL icon trong danh mục
             category.setIconUrl(iconUrl);
+            
+            // Xóa icon cũ từ Cloudinary (nếu có)
+            if (oldIconUrl != null && !oldIconUrl.isEmpty()) {
+                cloudinaryService.deleteCategoryIcon(oldIconUrl);
+            }
         }
         
         // Cập nhật thông tin
@@ -135,13 +143,17 @@ public class CategoryService {
      */
     @Transactional
     public void deleteCategory(Long id) {
-        // Kiểm tra xem danh mục có tồn tại không
-        if (!categoryRepository.existsById(id)) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND, "Category not found with id: " + id);
+        // Tìm danh mục theo ID
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Category not found with id: " + id));
+        
+        // Xóa icon từ Cloudinary nếu có
+        if (category.getIconUrl() != null && !category.getIconUrl().isEmpty()) {
+            cloudinaryService.deleteCategoryIcon(category.getIconUrl());
         }
         
-        // Xóa danh mục
+        // Xóa danh mục từ database
         categoryRepository.deleteById(id);
     }
 }

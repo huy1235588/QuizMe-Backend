@@ -272,4 +272,55 @@ public class CloudinaryService {
             return "raw";
         }
     }
+    
+    /**
+     * Xóa file từ Cloudinary dựa trên tên file và folder chứa
+     * 
+     * @param filename Tên file cần xóa
+     * @param folder Thư mục chứa file
+     * @return true nếu xóa thành công, false nếu có lỗi
+     */
+    public boolean deleteFile(String filename, String folder) {
+        if (filename == null || filename.isEmpty()) {
+            return false;
+        }
+        
+        try {
+            // Lấy public_id từ filename (bỏ phần extension)
+            String publicId = filename;
+            if (filename.contains(".")) {
+                publicId = filename.substring(0, filename.lastIndexOf("."));
+            }
+            
+            // Tạo public_id đầy đủ với folder
+            String fullPublicId = folder + "/" + publicId;
+            
+            // Xóa file từ Cloudinary
+            Map<String, Object> params = new HashMap<>();
+            params.put("resource_type", "image"); // Mặc định là image, có thể điều chỉnh dựa trên loại file
+            
+            Map result = cloudinary.uploader().destroy(fullPublicId, params);
+            
+            // Kiểm tra kết quả
+            return "ok".equals(result.get("result"));
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to delete file from Cloudinary: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Xóa icon của danh mục từ Cloudinary
+     * 
+     * @param iconUrl URL hoặc tên file của icon
+     * @return true nếu xóa thành công, false nếu có lỗi
+     */
+    public boolean deleteCategoryIcon(String iconUrl) {
+        // Nếu là URL đầy đủ, trích xuất tên file
+        String filename = iconUrl;
+        if (iconUrl != null && iconUrl.contains("/")) {
+            filename = iconUrl.substring(iconUrl.lastIndexOf("/") + 1);
+        }
+        
+        return deleteFile(filename, cloudinaryConfig.getCategoryIconsFolder());
+    }
 }

@@ -63,12 +63,12 @@ public class CategoryController {
      * @param categoryRequest Thông tin mới của danh mục
      * @return CategoryResponse của danh mục đã cập nhật
      */
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.OK)
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<CategoryResponse> updateCategory(
             @PathVariable Long id, 
-            @Valid @RequestBody CategoryRequest categoryRequest) {
+            @ModelAttribute @Valid CategoryRequest categoryRequest) {
         CategoryResponse updatedCategory = categoryService.updateCategory(id, categoryRequest);
         return ApiResponse.success(updatedCategory, "Category updated successfully");
     }

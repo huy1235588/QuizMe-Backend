@@ -7,6 +7,7 @@ import com.huy.quizme_backend.service.CategoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -46,10 +47,12 @@ public class CategoryController {
      * @param categoryRequest thông tin danh mục cần tạo
      * @return CategoryResponse của danh mục đã tạo
      */
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<CategoryResponse> createCategory(@Valid @RequestBody CategoryRequest categoryRequest) {
+    public ApiResponse<CategoryResponse> createCategory(
+            @ModelAttribute @Valid CategoryRequest categoryRequest
+    ) {
         CategoryResponse createdCategory = categoryService.createCategory(categoryRequest);
         return ApiResponse.created(createdCategory, "Category created successfully");
     }

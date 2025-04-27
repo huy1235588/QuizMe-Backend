@@ -58,14 +58,28 @@ public class CategoryService {
         Category category = Category.builder()
                 .name(categoryRequest.getName())
                 .description(categoryRequest.getDescription())
-                .iconUrl(categoryRequest.getIconUrl())
                 .quizCount(0)
                 .totalPlayCount(0)
                 .isActive(true)
                 .build();
         
-        // Lưu vào database
+        // Lưu vào database và lấy ID
         Category savedCategory = categoryRepository.save(category);
+
+        // Lưu icon vào Cloudinary (nếu có)
+        if (categoryRequest.getIconFile() != null && !categoryRequest.getIconFile().isEmpty()) {
+            // Tải lên Cloudinary và lấy tên file
+            String iconUrl = cloudinaryService.uploadCategoryIcon(
+                    categoryRequest.getIconFile(),
+                    savedCategory.getId()
+            );
+
+            // Cập nhật URL icon trong danh mục
+            savedCategory.setIconUrl(iconUrl);
+
+            // Lưu lại danh mục với URL icon mới
+            categoryRepository.save(savedCategory);
+        }
         
         // Trả về response
         return CategoryResponse.fromCategory(savedCategory, cloudinaryService);
@@ -90,11 +104,22 @@ public class CategoryService {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT, "Category with name '" + categoryRequest.getName() + "' already exists");
         }
+
+        // Nếu có file icon mới, tải lên Cloudinary
+        if (categoryRequest.getIconFile() != null && !categoryRequest.getIconFile().isEmpty()) {
+            // Tải lên Cloudinary và lấy tên file
+            String iconUrl = cloudinaryService.uploadCategoryIcon(
+                    categoryRequest.getIconFile(),
+                    category.getId()
+            );
+
+            // Cập nhật URL icon trong danh mục
+            category.setIconUrl(iconUrl);
+        }
         
         // Cập nhật thông tin
         category.setName(categoryRequest.getName());
         category.setDescription(categoryRequest.getDescription());
-        category.setIconUrl(categoryRequest.getIconUrl());
         category.setIsActive(categoryRequest.getIsActive());
         
         // Lưu vào database
@@ -103,16 +128,7 @@ public class CategoryService {
         // Trả về response
         return CategoryResponse.fromCategory(updatedCategory, cloudinaryService);
     }
-    
-    /**
-     * Tạo tên file icon cho danh mục theo định dạng quy định
-     * @param categoryId ID của danh mục
-     * @return Tên file theo quy tắc
-     */
-    public String generateCategoryIconFilename(Long categoryId) {
-        return cloudinaryService.generateCategoryIconFilename(categoryId);
-    }
-    
+
     /**
      * Xóa danh mục
      * @param id ID của danh mục cần xóa

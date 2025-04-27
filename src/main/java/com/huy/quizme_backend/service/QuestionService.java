@@ -97,14 +97,4 @@ public class QuestionService {
                 })
                 .collect(Collectors.toList());
     }
-    
-    /**
-     * Tạo tên file hình ảnh cho câu hỏi theo định dạng quy định
-     * @param quizId ID của quiz
-     * @param questionId ID của câu hỏi
-     * @return Tên file theo quy tắc
-     */
-    public String generateQuestionImageFilename(Long quizId, Long questionId) {
-        return cloudinaryService.generateQuestionImageFilename(quizId, questionId);
-    }
 }

@@ -34,13 +34,4 @@ public class UserService {
     public long countUsers() {
         return userRepository.count();
     }
-    
-    /**
-     * Tạo tên file ảnh đại diện theo định dạng quy định
-     * @param profileId ID của profile người dùng
-     * @return Tên file theo quy tắc
-     */
-    public String generateProfileImageFilename(Long profileId) {
-        return cloudinaryService.generateProfileImageFilename(profileId);
-    }
 }

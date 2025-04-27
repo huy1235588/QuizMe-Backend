@@ -67,13 +67,4 @@ public class QuizService {
                 .map(quiz -> QuizResponse.fromQuiz(quiz, cloudinaryService))
                 .collect(Collectors.toList());
     }
-    
-    /**
-     * Tạo tên file thumbnail cho quiz theo định dạng quy định
-     * @param quizId ID của quiz
-     * @return Tên file theo quy tắc
-     */
-    public String generateQuizThumbnailFilename(Long quizId) {
-        return cloudinaryService.generateQuizThumbnailFilename(quizId);
-    }
 }

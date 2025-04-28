@@ -40,7 +40,17 @@ public class CategoryService {
                         HttpStatus.NOT_FOUND, "Category not found with id: " + id));
         return CategoryResponse.fromCategory(category, cloudinaryService);
     }
-    
+
+    /**
+     * Lấy danh sách các danh mục hoạt động
+     * @return Danh sách các CategoryResponse
+     */
+    public List<CategoryResponse> getActiveCategories() {
+        return categoryRepository.findAllByIsActive(true).stream()
+                .map(category -> CategoryResponse.fromCategory(category, cloudinaryService))
+                .collect(Collectors.toList());
+    }
+
     /**
      * Tạo mới danh mục
      * @param categoryRequest thông tin danh mục cần tạo

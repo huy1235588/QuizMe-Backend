@@ -41,6 +41,17 @@ public class CategoryController {
         CategoryResponse category = categoryService.getCategoryById(id);
         return ApiResponse.success(category, "Category retrieved successfully");
     }
+
+    /**
+     * API lấy danh sách các danh mục hoạt động
+     * @return Danh sách các CategoryResponse
+     */
+    @GetMapping("/active")
+    @ResponseStatus(HttpStatus.OK)
+    public ApiResponse<List<CategoryResponse>> getActiveCategories() {
+        List<CategoryResponse> categories = categoryService.getActiveCategories();
+        return ApiResponse.success(categories, "Active categories retrieved successfully");
+    }
     
     /**
      * API tạo mới danh mục (chỉ dành cho ADMIN)

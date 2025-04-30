@@ -19,28 +19,28 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class QuestionRequest {
-    @NotNull(message = "Quiz ID không được để trống")
+    @NotNull(message = "Quiz ID must not be empty")
     private Long quizId;
     
-    @NotBlank(message = "Nội dung câu hỏi không được để trống")
+    @NotBlank(message = "Question content must not be empty")
     private String content;
     
     private MultipartFile imageFile;
 
     private MultipartFile audioFile;
     
-    @Min(value = 5, message = "Thời gian phải lớn hơn hoặc bằng 5 giây")
+    @Min(value = 5, message = "Time limit must be greater than or equal to 5 seconds")
     private Integer timeLimit = 30;
     
-    @Min(value = 1, message = "Điểm phải lớn hơn hoặc bằng 1")
+    @Min(value = 1, message = "Points must be greater than or equal to 1")
     private Integer points = 10;
     
     private Integer orderNumber;
 
     private QuestionType type;
     
-    @NotNull(message = "Phải có ít nhất 2 lựa chọn")
-    @Size(min = 2, message = "Phải có ít nhất 2 lựa chọn")
+    @NotNull(message = "There must be at least 2 options")
+    @Size(min = 2, message = "There must be at least 2 options")
     @Valid
     private List<QuestionOptionRequest> options;
     
@@ -49,10 +49,10 @@ public class QuestionRequest {
     @AllArgsConstructor
     @Builder
     public static class QuestionOptionRequest {
-        @NotBlank(message = "Nội dung lựa chọn không được để trống")
+        @NotBlank(message = "Option content must not be empty")
         private String content;
         
-        @NotNull(message = "Phải xác định lựa chọn đúng hay sai")
+        @NotNull(message = "You must specify whether the option is correct or not")
         private Boolean isCorrect;
     }
 }

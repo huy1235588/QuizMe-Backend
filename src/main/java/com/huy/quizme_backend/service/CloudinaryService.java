@@ -19,7 +19,7 @@ import java.util.Map;
 public class CloudinaryService {
     private final CloudinaryConfig cloudinaryConfig;
     private final Cloudinary cloudinary;
-    
+
     /**
      * Enum định nghĩa các loại file và thông tin liên quan
      */
@@ -28,11 +28,12 @@ public class CloudinaryService {
         PROFILE("profile_%d_%d%s", "getProfileAvatarFolder"),
         QUIZ_THUMBNAIL("quiz_thumbnail_%d_%d%s", "getQuizThumbnailsFolder"),
         QUESTION_IMAGE("quiz_%d_question_%d_%d%s", "getQuestionImagesFolder"),
+        QUESTION_AUDIO("quiz_%d_question_%d_%d%s", "getQuestionAudiosFolder"),
         CATEGORY_ICON("category_%d_%d%s", "getCategoryIconsFolder");
-        
+
         private final String filenamePattern;
         private final String folderMethod;
-        
+
         FileType(String filenamePattern, String folderMethod) {
             this.filenamePattern = filenamePattern;
             this.folderMethod = folderMethod;
@@ -70,6 +71,16 @@ public class CloudinaryService {
     }
 
     /**
+     * Tạo URL đầy đủ cho audio của câu hỏi
+     *
+     * @param filename Tên file được lưu trong database
+     * @return URL đầy đủ của Cloudinary
+     */
+    public String getQuestionAudioUrl(String filename) {
+        return getResourceUrl(cloudinaryConfig.getQuestionAudiosFolder(), filename);
+    }
+
+    /**
      * Tạo URL đầy đủ cho icon của danh mục
      *
      * @param filename Tên file được lưu trong database
@@ -82,7 +93,7 @@ public class CloudinaryService {
     /**
      * Tạo URL chung cho tất cả loại tài nguyên
      *
-     * @param folder Thư mục chứa tài nguyên
+     * @param folder   Thư mục chứa tài nguyên
      * @param filename Tên file
      * @return URL đầy đủ hoặc null nếu filename không hợp lệ
      */
@@ -117,19 +128,19 @@ public class CloudinaryService {
      * @return Tên file theo quy tắc
      */
     public String generateProfileImageFilename(Long profileId, String extension) {
-        return String.format(FileType.PROFILE.getFilenamePattern(), 
+        return String.format(FileType.PROFILE.getFilenamePattern(),
                 profileId, System.currentTimeMillis(), extension);
     }
 
     /**
      * Tạo tên file theo định dạng cho quiz thumbnail
      *
-     * @param quizId ID của quiz
+     * @param quizId    ID của quiz
      * @param extension Phần mở rộng của file
      * @return Tên file theo quy tắc
      */
     public String generateQuizThumbnailFilename(Long quizId, String extension) {
-        return String.format(FileType.QUIZ_THUMBNAIL.getFilenamePattern(), 
+        return String.format(FileType.QUIZ_THUMBNAIL.getFilenamePattern(),
                 quizId, System.currentTimeMillis(), extension);
     }
 
@@ -138,11 +149,24 @@ public class CloudinaryService {
      *
      * @param quizId     ID của quiz
      * @param questionId ID của câu hỏi
-     * @param extension Phần mở rộng của file
+     * @param extension  Phần mở rộng của file
      * @return Tên file theo quy tắc
      */
     public String generateQuestionImageFilename(Long quizId, Long questionId, String extension) {
-        return String.format(FileType.QUESTION_IMAGE.getFilenamePattern(), 
+        return String.format(FileType.QUESTION_IMAGE.getFilenamePattern(),
+                quizId, questionId, System.currentTimeMillis(), extension);
+    }
+
+    /**
+     * Tạo tên file theo định dạng cho question audio
+     *
+     * @param quizId     ID của quiz
+     * @param questionId ID của câu hỏi
+     * @param extension  Phần mở rộng của file
+     * @return Tên file theo quy tắc
+     */
+    public String generateQuestionAudioFilename(Long quizId, Long questionId, String extension) {
+        return String.format(FileType.QUESTION_AUDIO.getFilenamePattern(),
                 quizId, questionId, System.currentTimeMillis(), extension);
     }
 
@@ -150,18 +174,18 @@ public class CloudinaryService {
      * Tạo tên file theo định dạng cho category icon
      *
      * @param categoryId ID của danh mục
-     * @param extension Phần mở rộng của file
+     * @param extension  Phần mở rộng của file
      * @return Tên file theo quy tắc
      */
     public String generateCategoryIconFilename(Long categoryId, String extension) {
-        return String.format(FileType.CATEGORY_ICON.getFilenamePattern(), 
+        return String.format(FileType.CATEGORY_ICON.getFilenamePattern(),
                 categoryId, System.currentTimeMillis(), extension);
     }
 
     /**
      * Upload ảnh đại diện người dùng lên Cloudinary
-     * 
-     * @param file File ảnh
+     *
+     * @param file      File ảnh
      * @param profileId ID của profile
      * @return Tên file đã tạo hoặc null nếu upload thất bại
      */
@@ -173,8 +197,8 @@ public class CloudinaryService {
 
     /**
      * Upload ảnh thumbnail quiz lên Cloudinary
-     * 
-     * @param file File ảnh
+     *
+     * @param file   File ảnh
      * @param quizId ID của quiz
      * @return Tên file đã tạo hoặc null nếu upload thất bại
      */
@@ -183,12 +207,12 @@ public class CloudinaryService {
         String filename = generateQuizThumbnailFilename(quizId, extension);
         return uploadFile(file, filename, cloudinaryConfig.getQuizThumbnailsFolder());
     }
-    
+
     /**
      * Upload ảnh câu hỏi lên Cloudinary
-     * 
-     * @param file File ảnh
-     * @param quizId ID của quiz
+     *
+     * @param file       File ảnh
+     * @param quizId     ID của quiz
      * @param questionId ID của câu hỏi
      * @return Tên file đã tạo hoặc null nếu upload thất bại
      */
@@ -199,9 +223,23 @@ public class CloudinaryService {
     }
 
     /**
+     * Upload audio câu hỏi lên Cloudinary
+     *
+     * @param file       File audio
+     * @param quizId     ID của quiz
+     * @param questionId ID của câu hỏi
+     * @return Tên file đã tạo hoặc null nếu upload thất bại
+     */
+    public String uploadQuestionAudio(MultipartFile file, long quizId, long questionId) {
+        String extension = getFileExtension(file.getOriginalFilename());
+        String filename = generateQuestionAudioFilename(quizId, questionId, extension);
+        return uploadFile(file, filename, cloudinaryConfig.getQuestionAudiosFolder());
+    }
+
+    /**
      * Upload icon danh mục lên Cloudinary
      *
-     * @param iconFile File icon
+     * @param iconFile   File icon
      * @param categoryId ID của danh mục
      * @return Tên file đã tạo hoặc null nếu upload thất bại
      */
@@ -213,10 +251,10 @@ public class CloudinaryService {
 
     /**
      * Upload file lên Cloudinary
-     * 
-     * @param file File cần upload
+     *
+     * @param file     File cần upload
      * @param filename Tên file đã được tạo
-     * @param folder Thư mục chứa file
+     * @param folder   Thư mục chứa file
      * @return Tên file hoặc null nếu thất bại
      */
     private String uploadFile(MultipartFile file, String filename, String folder) {
@@ -227,12 +265,12 @@ public class CloudinaryService {
         try {
             String publicId = filename.substring(0, filename.lastIndexOf("."));
             String resourceType = determineResourceType(getFileExtension(filename));
-            
+
             Map<String, Object> params = new HashMap<>();
             params.put("folder", folder);
             params.put("public_id", publicId);
             params.put("resource_type", resourceType);
-            
+
             cloudinary.uploader().upload(file.getBytes(), params);
             return filename;
         } catch (IOException e) {
@@ -242,6 +280,7 @@ public class CloudinaryService {
 
     /**
      * Lấy phần mở rộng từ tên file
+     *
      * @param filename Tên file đầy đủ
      * @return Phần mở rộng bao gồm dấu chấm
      */
@@ -254,8 +293,9 @@ public class CloudinaryService {
 
     /**
      * Xác định resource_type dựa vào phần mở rộng file
+     *
      * @param extension Phần mở rộng của file
-     * @return "image", "video" hoặc "raw" tùy thuộc vào loại file
+     * @return "image", "video" hoặc "audio" tùy thuộc vào loại file
      */
     private String determineResourceType(String extension) {
         if (extension == null) {
@@ -268,49 +308,53 @@ public class CloudinaryService {
             return "image";
         } else if (extension.matches("\\.(mp4|mov|avi|wmv)$")) {
             return "video";
+        } else if (extension.matches("\\.(mp3|wav|ogg)$")) {
+            return "audio";
+        } else if (extension.matches("\\.(pdf|doc|docx|ppt|pptx)$")) {
+            return "raw";
         } else {
             return "raw";
         }
     }
-    
+
     /**
      * Xóa file từ Cloudinary dựa trên tên file và folder chứa
-     * 
+     *
      * @param filename Tên file cần xóa
-     * @param folder Thư mục chứa file
+     * @param folder   Thư mục chứa file
      * @return true nếu xóa thành công, false nếu có lỗi
      */
     public boolean deleteFile(String filename, String folder) {
         if (filename == null || filename.isEmpty()) {
             return false;
         }
-        
+
         try {
             // Lấy public_id từ filename (bỏ phần extension)
             String publicId = filename;
             if (filename.contains(".")) {
                 publicId = filename.substring(0, filename.lastIndexOf("."));
             }
-            
+
             // Tạo public_id đầy đủ với folder
             String fullPublicId = folder + "/" + publicId;
-            
+
             // Xóa file từ Cloudinary
             Map<String, Object> params = new HashMap<>();
             params.put("resource_type", "image"); // Mặc định là image, có thể điều chỉnh dựa trên loại file
-            
+
             Map result = cloudinary.uploader().destroy(fullPublicId, params);
-            
+
             // Kiểm tra kết quả
             return "ok".equals(result.get("result"));
         } catch (IOException e) {
             throw new RuntimeException("Failed to delete file from Cloudinary: " + e.getMessage(), e);
         }
     }
-    
+
     /**
      * Xóa icon của danh mục từ Cloudinary
-     * 
+     *
      * @param iconUrl URL hoặc tên file của icon
      * @return true nếu xóa thành công, false nếu có lỗi
      */
@@ -320,13 +364,13 @@ public class CloudinaryService {
         if (iconUrl != null && iconUrl.contains("/")) {
             filename = iconUrl.substring(iconUrl.lastIndexOf("/") + 1);
         }
-        
+
         return deleteFile(filename, cloudinaryConfig.getCategoryIconsFolder());
     }
-    
+
     /**
      * Xóa thumbnail của quiz từ Cloudinary
-     * 
+     *
      * @param thumbnailUrl URL hoặc tên file của thumbnail
      * @return true nếu xóa thành công, false nếu có lỗi
      */
@@ -336,13 +380,13 @@ public class CloudinaryService {
         if (thumbnailUrl != null && thumbnailUrl.contains("/")) {
             filename = thumbnailUrl.substring(thumbnailUrl.lastIndexOf("/") + 1);
         }
-        
+
         return deleteFile(filename, cloudinaryConfig.getQuizThumbnailsFolder());
     }
-    
+
     /**
      * Xóa ảnh của câu hỏi từ Cloudinary
-     * 
+     *
      * @param imageUrl URL hoặc tên file của ảnh câu hỏi
      * @return true nếu xóa thành công, false nếu có lỗi
      */
@@ -352,7 +396,23 @@ public class CloudinaryService {
         if (imageUrl != null && imageUrl.contains("/")) {
             filename = imageUrl.substring(imageUrl.lastIndexOf("/") + 1);
         }
-        
+
         return deleteFile(filename, cloudinaryConfig.getQuestionImagesFolder());
+    }
+
+    /**
+     * Xóa audio của câu hỏi từ Cloudinary
+     *
+     * @param audioUrl URL hoặc tên file của audio câu hỏi
+     * @return true nếu xóa thành công, false nếu có lỗi
+     */
+    public boolean deleteQuestionAudio(String audioUrl) {
+        // Nếu là URL đầy đủ, trích xuất tên file
+        String filename = audioUrl;
+        if (audioUrl != null && audioUrl.contains("/")) {
+            filename = audioUrl.substring(audioUrl.lastIndexOf("/") + 1);
+        }
+
+        return deleteFile(filename, cloudinaryConfig.getQuestionAudiosFolder());
     }
 }

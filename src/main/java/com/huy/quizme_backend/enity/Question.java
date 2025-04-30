@@ -9,11 +9,11 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(
-    name = "question",
-    indexes = {
-        @Index(name = "idx_quiz_id", columnList = "quiz_id"),
-        @Index(name = "idx_order_number", columnList = "order_number")
-    }
+        name = "question",
+        indexes = {
+                @Index(name = "idx_quiz_id", columnList = "quiz_id"),
+                @Index(name = "idx_order_number", columnList = "order_number")
+        }
 )
 @Getter
 @Setter
@@ -35,6 +35,9 @@ public class Question {
     @Column(name = "image_url", length = 255)
     private String imageUrl;
 
+    @Column(name = "audio_url", length = 255)
+    private String audioUrl;
+
     @Column(name = "time_limit", nullable = false)
     private Integer timeLimit = 30;
 
@@ -43,6 +46,9 @@ public class Question {
 
     @Column(name = "order_number", nullable = false)
     private Integer orderNumber;
+
+    @Column(name = "type", nullable = false)
+    private QuestionType type = QuestionType.QUIZ;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

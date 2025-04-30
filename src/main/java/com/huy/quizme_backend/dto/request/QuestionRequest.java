@@ -1,5 +1,6 @@
 package com.huy.quizme_backend.dto.request;
 
+import com.huy.quizme_backend.enity.QuestionType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -25,6 +26,8 @@ public class QuestionRequest {
     private String content;
     
     private MultipartFile imageFile;
+
+    private MultipartFile audioFile;
     
     @Min(value = 5, message = "Thời gian phải lớn hơn hoặc bằng 5 giây")
     private Integer timeLimit = 30;
@@ -33,6 +36,8 @@ public class QuestionRequest {
     private Integer points = 10;
     
     private Integer orderNumber;
+
+    private QuestionType type;
     
     @NotNull(message = "Phải có ít nhất 2 lựa chọn")
     @Size(min = 2, message = "Phải có ít nhất 2 lựa chọn")

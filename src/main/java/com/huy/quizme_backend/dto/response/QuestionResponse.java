@@ -21,9 +21,11 @@ public class QuestionResponse {
     private String quizTitle;
     private String content;
     private String imageUrl;
+    private String audioUrl;
     private Integer timeLimit;
     private Integer points;
     private Integer orderNumber;
+    private String type;
     private String createdAt;
     private String updatedAt;
     private List<QuestionOptionResponse> options;
@@ -36,9 +38,11 @@ public class QuestionResponse {
                 .quizTitle(question.getQuiz().getTitle())
                 .content(question.getContent())
                 .imageUrl(question.getImageUrl())
+                .audioUrl(question.getAudioUrl())
                 .timeLimit(question.getTimeLimit())
                 .points(question.getPoints())
                 .orderNumber(question.getOrderNumber())
+                .type(question.getType().name())
                 .createdAt(question.getCreatedAt().toString())
                 .updatedAt(question.getUpdatedAt() != null ? question.getUpdatedAt().toString() : null)
                 .build();
@@ -49,6 +53,8 @@ public class QuestionResponse {
         QuestionResponse response = fromQuestion(question);
         if (question.getImageUrl() != null && !question.getImageUrl().isEmpty()) {
             response.setImageUrl(cloudinaryService.getQuestionImageUrl(question.getImageUrl()));
+        } else if (question.getAudioUrl() != null && !question.getAudioUrl().isEmpty()) {
+            response.setAudioUrl(cloudinaryService.getQuestionAudioUrl(question.getAudioUrl()));
         }
         return response;
     }

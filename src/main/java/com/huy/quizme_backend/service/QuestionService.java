@@ -150,6 +150,22 @@ public class QuestionService {
             // Lưu lại câu hỏi với URL hình ảnh mới
             questionRepository.save(savedQuestion);
         }
+
+        // Lưu audio vào Cloudinary (nếu có)
+        if (questionRequest.getAudioFile() != null && !questionRequest.getAudioFile().isEmpty()) {
+            // Tải lên Cloudinary và lấy tên file
+            String audioUrl = cloudinaryService.uploadQuestionAudio(
+                    questionRequest.getAudioFile(),
+                    questionRequest.getQuizId(),
+                    savedQuestion.getId()
+            );
+
+            // Cập nhật URL audio trong câu hỏi
+            savedQuestion.setAudioUrl(audioUrl);
+
+            // Lưu lại câu hỏi với URL audio mới
+            questionRepository.save(savedQuestion);
+        }
         
         // Tạo và lưu các lựa chọn cho câu hỏi
         List<QuestionOption> savedOptions = questionOptionService.createOptionsForQuestion(
@@ -226,6 +242,27 @@ public class QuestionService {
                 cloudinaryService.deleteQuestionImage(oldImageUrl);
             }
         }
+
+        // Nếu có file audio mới, tải lên Cloudinary và xóa file cũ
+        if (questionRequest.getAudioFile() != null && !questionRequest.getAudioFile().isEmpty()) {
+            // Lưu URL audio cũ để xóa sau khi upload thành công
+            String oldAudioUrl = question.getAudioUrl();
+
+            // Tải lên Cloudinary và lấy tên file mới
+            String audioUrl = cloudinaryService.uploadQuestionAudio(
+                    questionRequest.getAudioFile(),
+                    question.getQuiz().getId(),
+                    question.getId()
+            );
+
+            // Cập nhật URL audio trong câu hỏi
+            question.setAudioUrl(audioUrl);
+
+            // Xóa audio cũ từ Cloudinary (nếu có)
+            if (oldAudioUrl != null && !oldAudioUrl.isEmpty()) {
+                cloudinaryService.deleteQuestionImage(oldAudioUrl);
+            }
+        }
         
         // Lưu câu hỏi vào database
         Question updatedQuestion = questionRepository.save(question);
@@ -257,6 +294,11 @@ public class QuestionService {
         // Xóa hình ảnh từ Cloudinary nếu có
         if (question.getImageUrl() != null && !question.getImageUrl().isEmpty()) {
             cloudinaryService.deleteQuestionImage(question.getImageUrl());
+        }
+
+        // Xóa audio từ Cloudinary nếu có
+        if (question.getAudioUrl() != null && !question.getAudioUrl().isEmpty()) {
+            cloudinaryService.deleteQuestionAudio(question.getAudioUrl());
         }
         
         // Xóa tất cả các lựa chọn của câu hỏi

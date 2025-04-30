@@ -45,6 +45,10 @@ public class CloudinaryConfig {
         return folder.get("question-images");
     }
 
+    public String getQuestionAudiosFolder() {
+        return folder.get("question-audios");
+    }
+
     public String getCategoryIconsFolder() {
         return folder.get("category-icons");
     }

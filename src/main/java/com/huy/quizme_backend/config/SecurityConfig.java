@@ -98,7 +98,9 @@ public class SecurityConfig {
                         // Cấu hình các endpoint được phép truy cập
                         .requestMatchers("/api/auth/**", "/api/categories/**", "/api/quizzes/**", "/api/questions/**", "/api/users/**").permitAll()
                         // Thêm các endpoint public khác nếu có
-                        // ...
+                        .requestMatchers("/uploads/**").permitAll() // Cho phép truy cập vào endpoint upload
+
+                        // Cấu hình các endpoint yêu cầu xác thực
                         .anyRequest().authenticated() // Tất cả các request khác đều cần xác thực
                 )
                 .authenticationProvider(authenticationProvider()) // Cung cấp AuthenticationProvider

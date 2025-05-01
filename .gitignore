@@ -38,3 +38,4 @@ src/main/resources/application.yml
 ### Environment Files ###
 .env
 .env.*
+/uploads

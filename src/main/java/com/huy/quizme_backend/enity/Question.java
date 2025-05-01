@@ -6,6 +6,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(
@@ -35,8 +36,17 @@ public class Question {
     @Column(name = "image_url", length = 255)
     private String imageUrl;
 
+    @Column(name = "video_url", length = 255)
+    private String videoUrl;
+
     @Column(name = "audio_url", length = 255)
     private String audioUrl;
+
+    @Column(name = "fun_fact", columnDefinition = "TEXT")
+    private String funFact;
+
+    @Column(columnDefinition = "TEXT")
+    private String explanation;
 
     @Column(name = "time_limit", nullable = false)
     private Integer timeLimit = 30;
@@ -57,4 +67,8 @@ public class Question {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    // Relationships
+    @OneToMany(mappedBy = "question", cascade = CascadeType.ALL)
+    private List<QuestionOption> options;
 }

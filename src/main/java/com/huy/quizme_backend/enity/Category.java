@@ -6,6 +6,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(
@@ -47,4 +48,7 @@ public class Category {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-}
+
+    // Relationships
+    @OneToMany(mappedBy = "category")
+    private List<Quiz> quizzes;}

@@ -6,6 +6,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(
@@ -36,11 +37,11 @@ public class Quiz {
     @Column(name = "quiz_thumbnails", length = 255)
     private String quizThumbnails;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "creator_id", nullable = false)
     private User creator;
 
@@ -64,4 +65,8 @@ public class Quiz {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    // Relationships
+    @OneToMany(mappedBy = "quiz", cascade = CascadeType.ALL)
+    private List<Question> questions;
 }

@@ -127,7 +127,6 @@ CREATE TABLE IF NOT EXISTS quiz
     title           VARCHAR(100) NOT NULL,
     description     VARCHAR(1000),
     quiz_thumbnails VARCHAR(255),
-    category_id     BIGINT,
     creator_id      BIGINT       NOT NULL,
     difficulty      ENUM ('EASY', 'MEDIUM', 'HARD') DEFAULT 'MEDIUM',
     is_public       BOOLEAN                         DEFAULT TRUE,
@@ -137,13 +136,24 @@ CREATE TABLE IF NOT EXISTS quiz
     created_at      TIMESTAMP                       DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP                       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-    FOREIGN KEY (category_id) REFERENCES category (id) ON DELETE SET NULL,
     FOREIGN KEY (creator_id) REFERENCES user (id) ON DELETE CASCADE,
-    INDEX idx_category_id (category_id),
     INDEX idx_creator_id (creator_id),
     INDEX idx_difficulty (difficulty),
     INDEX idx_is_public (is_public),
     INDEX idx_play_count (play_count)
+);
+
+-- Bảng liên kết giữa quiz và category
+CREATE TABLE IF NOT EXISTS quiz_category
+(
+    quiz_id     BIGINT NOT NULL,
+    category_id BIGINT NOT NULL,
+
+    primary key (quiz_id, category_id),
+
+    foreign key (quiz_id) REFERENCES quiz (id) ON DELETE CASCADE,
+    foreign key (category_id) REFERENCES category (id) ON DELETE CASCADE,
+    INDEX idx_quiz_id (quiz_id)
 );
 
 -- Bảng question
@@ -153,7 +163,10 @@ CREATE TABLE IF NOT EXISTS question
     quiz_id      BIGINT NOT NULL,
     content      TEXT   NOT NULL,
     image_url    VARCHAR(255),
+    video_url    VARCHAR(255),
     audio_url    VARCHAR(255),
+    fun_fact     TEXT, -- Nội dung thú vị về câu hỏi
+    explanation  TEXT, -- Giải thích câu trả lời đúng
     time_limit   INT             DEFAULT 30,
     points       INT             DEFAULT 10,
     order_number INT    NOT NULL,
@@ -162,6 +175,7 @@ CREATE TABLE IF NOT EXISTS question
         'TRUE_FALSE',
         'TYPE_ANSWER',
         'QUIZ_AUDIO',
+        'QUIZ_VIDEO',
         'CHECKBOX',
         'POLL'
         )               NOT NULL DEFAULT 'QUIZ',
@@ -188,6 +202,31 @@ CREATE TABLE IF NOT EXISTS question_option
     FOREIGN KEY (question_id) REFERENCES question (id) ON DELETE CASCADE,
     INDEX idx_question_id (question_id),
     INDEX idx_question_is_correct (question_id, is_correct)
+);
+
+-- Bảng autocomplete_hint
+CREATE TABLE IF NOT EXISTS autocomplete_hint
+(
+    id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+    content    TEXT NOT NULL,
+    priority   INT       DEFAULT 0,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Bảng liên kết giữa question và autocomplete_hint
+CREATE TABLE IF NOT EXISTS question_autocomplete_hint
+(
+    question_id     BIGINT NOT NULL,
+    autocomplete_id BIGINT NOT NULL,
+
+    primary key (question_id, autocomplete_id),
+
+    FOREIGN KEY (question_id) REFERENCES question (id) ON DELETE CASCADE,
+    FOREIGN KEY (autocomplete_id) REFERENCES autocomplete_hint (id) ON DELETE CASCADE,
+    INDEX idx_question_id (question_id),
+    INDEX idx_autocomplete_id (autocomplete_id)
 );
 
 -- Bảng saved_quiz
@@ -327,8 +366,7 @@ ON DUPLICATE KEY
 -- Nếu user đã tồn tại thì chỉ cập nhật tên
 
 -- === User Profile ===
-INSERT INTO user_profile (
-                          id,
+INSERT INTO user_profile (id,
                           user_id,
                           date_of_birth,
                           city,

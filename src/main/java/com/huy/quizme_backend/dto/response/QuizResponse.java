@@ -2,7 +2,7 @@ package com.huy.quizme_backend.dto.response;
 
 import com.huy.quizme_backend.enity.Difficulty;
 import com.huy.quizme_backend.enity.Quiz;
-import com.huy.quizme_backend.service.CloudinaryService;
+import com.huy.quizme_backend.service.LocalStorageService;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -49,10 +49,10 @@ public class QuizResponse {
     }
     
     // Chuyển đổi từ Quiz entity sang QuizResponse DTO với Cloudinary URL
-    public static QuizResponse fromQuiz(Quiz quiz, CloudinaryService cloudinaryService) {
+    public static QuizResponse fromQuiz(Quiz quiz, LocalStorageService localStorageService) {
         QuizResponse response = fromQuiz(quiz);
         if (quiz.getQuizThumbnails() != null && !quiz.getQuizThumbnails().isEmpty()) {
-            response.setQuizThumbnails(cloudinaryService.getQuizThumbnailUrl(quiz.getQuizThumbnails()));
+            response.setQuizThumbnails(localStorageService.getQuizThumbnailUrl(quiz.getQuizThumbnails()));
         }
         return response;
     }

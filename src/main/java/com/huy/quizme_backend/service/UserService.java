@@ -11,7 +11,7 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
-    private final CloudinaryService cloudinaryService;
+    private final LocalStorageService localStorageService;
 
     /**
      * Lấy thông tin người dùng theo ID
@@ -21,7 +21,7 @@ public class UserService {
      */
     public UserResponse getUserById(Long id) {
         return userRepository.findById(id)
-                .map(user -> UserResponse.fromUser(user, cloudinaryService))
+                .map(user -> UserResponse.fromUser(user, localStorageService))
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "User not found with id: " + id));
     }

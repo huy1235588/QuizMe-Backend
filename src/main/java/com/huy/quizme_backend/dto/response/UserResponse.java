@@ -2,7 +2,7 @@ package com.huy.quizme_backend.dto.response;
 
 import com.huy.quizme_backend.enity.Role;
 import com.huy.quizme_backend.enity.User;
-import com.huy.quizme_backend.service.CloudinaryService;
+import com.huy.quizme_backend.service.LocalStorageService;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -41,10 +41,10 @@ public class UserResponse {
     }
     
     // Map từ User entity sang UserResponse DTO với Cloudinary URL
-    public static UserResponse fromUser(User user, CloudinaryService cloudinaryService) {
+    public static UserResponse fromUser(User user, LocalStorageService localStorageService) {
         UserResponse response = fromUser(user);
         if (user.getProfileImage() != null && !user.getProfileImage().isEmpty()) {
-            response.setProfileImage(cloudinaryService.getProfileImageUrl(user.getProfileImage()));
+            response.setProfileImage(localStorageService.getProfileImageUrl(user.getProfileImage()));
         }
         return response;
     }

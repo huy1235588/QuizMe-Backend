@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CategoryService {
     private final CategoryRepository categoryRepository;
-    private final CloudinaryService cloudinaryService;
+    private final LocalStorageService localStorageService;
     
     /**
      * Lấy danh sách tất cả các danh mục
@@ -25,7 +25,7 @@ public class CategoryService {
      */
     public List<CategoryResponse> getAllCategories() {
         return categoryRepository.findAll().stream()
-                .map(category -> CategoryResponse.fromCategory(category, cloudinaryService))
+                .map(category -> CategoryResponse.fromCategory(category, localStorageService))
                 .collect(Collectors.toList());
     }
     
@@ -38,7 +38,7 @@ public class CategoryService {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Category not found with id: " + id));
-        return CategoryResponse.fromCategory(category, cloudinaryService);
+        return CategoryResponse.fromCategory(category, localStorageService);
     }
 
     /**
@@ -47,7 +47,7 @@ public class CategoryService {
      */
     public List<CategoryResponse> getActiveCategories() {
         return categoryRepository.findAllByIsActive(true).stream()
-                .map(category -> CategoryResponse.fromCategory(category, cloudinaryService))
+                .map(category -> CategoryResponse.fromCategory(category, localStorageService))
                 .collect(Collectors.toList());
     }
 
@@ -79,7 +79,7 @@ public class CategoryService {
         // Lưu icon vào Cloudinary (nếu có)
         if (categoryRequest.getIconFile() != null && !categoryRequest.getIconFile().isEmpty()) {
             // Tải lên Cloudinary và lấy tên file
-            String iconUrl = cloudinaryService.uploadCategoryIcon(
+            String iconUrl = localStorageService.uploadCategoryIcon(
                     categoryRequest.getIconFile(),
                     savedCategory.getId()
             );
@@ -92,7 +92,7 @@ public class CategoryService {
         }
         
         // Trả về response
-        return CategoryResponse.fromCategory(savedCategory, cloudinaryService);
+        return CategoryResponse.fromCategory(savedCategory, localStorageService);
     }
     
     /**
@@ -121,7 +121,7 @@ public class CategoryService {
             String oldIconUrl = category.getIconUrl();
             
             // Tải lên Cloudinary và lấy tên file mới
-            String iconUrl = cloudinaryService.uploadCategoryIcon(
+            String iconUrl = localStorageService.uploadCategoryIcon(
                     categoryRequest.getIconFile(),
                     category.getId()
             );
@@ -131,7 +131,7 @@ public class CategoryService {
             
             // Xóa icon cũ từ Cloudinary (nếu có)
             if (oldIconUrl != null && !oldIconUrl.isEmpty()) {
-                cloudinaryService.deleteCategoryIcon(oldIconUrl);
+                localStorageService.deleteCategoryIcon(oldIconUrl);
             }
         }
         
@@ -144,7 +144,7 @@ public class CategoryService {
         Category updatedCategory = categoryRepository.save(category);
         
         // Trả về response
-        return CategoryResponse.fromCategory(updatedCategory, cloudinaryService);
+        return CategoryResponse.fromCategory(updatedCategory, localStorageService);
     }
 
     /**
@@ -160,7 +160,7 @@ public class CategoryService {
         
         // Xóa icon từ Cloudinary nếu có
         if (category.getIconUrl() != null && !category.getIconUrl().isEmpty()) {
-            cloudinaryService.deleteCategoryIcon(category.getIconUrl());
+            localStorageService.deleteCategoryIcon(category.getIconUrl());
         }
         
         // Xóa danh mục từ database

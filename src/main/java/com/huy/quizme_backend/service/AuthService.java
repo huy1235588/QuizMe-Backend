@@ -31,7 +31,7 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider tokenProvider;
-    private final CloudinaryService cloudinaryService;
+    private final LocalStorageService localStorageService;
 
     // Phương thức đăng nhập
     @Transactional
@@ -84,7 +84,7 @@ public class AuthService {
                 accessExpiry,
                 refreshToken,
                 refreshExpiry,
-                UserResponse.fromUser(user, cloudinaryService)
+                UserResponse.fromUser(user, localStorageService)
         );
     }
 
@@ -116,7 +116,7 @@ public class AuthService {
                 .build();
 
         // Trả về người dùng đã lưu vào cơ sở dữ liệu với chuyển đổi Cloudinary URL
-        return UserResponse.fromUser(userRepository.save(user), cloudinaryService);
+        return UserResponse.fromUser(userRepository.save(user), localStorageService);
     }
 
     // Phương thức đăng xuất
@@ -150,7 +150,7 @@ public class AuthService {
                 accessExpiry,
                 refreshToken,
                 token.getExpiresAt(),
-                UserResponse.fromUser(token.getUser(), cloudinaryService)
+                UserResponse.fromUser(token.getUser(), localStorageService)
         );
     }
 }

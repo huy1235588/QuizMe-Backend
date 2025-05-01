@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 public class QuestionService {
     private final QuestionRepository questionRepository;
     private final QuizRepository quizRepository;
-    private final CloudinaryService cloudinaryService;
+    private final LocalStorageService localStorageService;
     private final QuestionOptionService questionOptionService;
 
     /**
@@ -48,7 +48,7 @@ public class QuestionService {
     public QuestionResponse getQuestionById(Long id) {
         Question question = findQuestionById(id);
         List<QuestionOption> options = questionOptionService.getOptionsByQuestionId(id);
-        return QuestionResponse.fromQuestionWithOptions(question, options, cloudinaryService);
+        return QuestionResponse.fromQuestionWithOptions(question, options, localStorageService);
     }
 
     /**
@@ -96,7 +96,7 @@ public class QuestionService {
         // Cập nhật số lượng câu hỏi trong quiz
         updateQuizQuestionCount(quiz, 1);
 
-        return QuestionResponse.fromQuestionWithOptions(savedQuestion, savedOptions, cloudinaryService);
+        return QuestionResponse.fromQuestionWithOptions(savedQuestion, savedOptions, localStorageService);
     }
 
     /**
@@ -136,7 +136,7 @@ public class QuestionService {
         List<QuestionOption> newOptions = questionOptionService.updateOptionsForQuestion(
                 updatedQuestion, questionRequest.getOptions());
 
-        return QuestionResponse.fromQuestionWithOptions(updatedQuestion, newOptions, cloudinaryService);
+        return QuestionResponse.fromQuestionWithOptions(updatedQuestion, newOptions, localStorageService);
     }
 
     /**
@@ -189,7 +189,7 @@ public class QuestionService {
         return questions.stream()
                 .map(question -> {
                     List<QuestionOption> options = optionsByQuestionId.getOrDefault(question.getId(), List.of());
-                    return QuestionResponse.fromQuestionWithOptions(question, options, cloudinaryService);
+                    return QuestionResponse.fromQuestionWithOptions(question, options, localStorageService);
                 })
                 .collect(Collectors.toList());
     }
@@ -289,7 +289,7 @@ public class QuestionService {
     private void handleMediaUploads(Question question, MultipartFile imageFile, MultipartFile audioFile) {
         // Xử lý upload hình ảnh
         if (imageFile != null && !imageFile.isEmpty()) {
-            String imageUrl = cloudinaryService.uploadQuestionImage(
+            String imageUrl = localStorageService.uploadQuestionImage(
                     imageFile, question.getQuiz().getId(), question.getId());
             question.setImageUrl(imageUrl);
             questionRepository.save(question);
@@ -297,7 +297,7 @@ public class QuestionService {
 
         // Xử lý upload âm thanh
         if (audioFile != null && !audioFile.isEmpty()) {
-            String audioUrl = cloudinaryService.uploadQuestionAudio(
+            String audioUrl = localStorageService.uploadQuestionAudio(
                     audioFile, question.getQuiz().getId(), question.getId());
             question.setAudioUrl(audioUrl);
             questionRepository.save(question);
@@ -317,25 +317,25 @@ public class QuestionService {
                                     String oldImageUrl, String oldAudioUrl) {
         // Xử lý cập nhật hình ảnh
         if (imageFile != null && !imageFile.isEmpty()) {
-            String imageUrl = cloudinaryService.uploadQuestionImage(
+            String imageUrl = localStorageService.uploadQuestionImage(
                     imageFile, question.getQuiz().getId(), question.getId());
             question.setImageUrl(imageUrl);
 
             // Xóa hình ảnh cũ nếu có
             if (oldImageUrl != null && !oldImageUrl.isEmpty()) {
-                cloudinaryService.deleteQuestionImage(oldImageUrl);
+                localStorageService.deleteQuestionImage(oldImageUrl);
             }
         }
 
         // Xử lý cập nhật âm thanh
         if (audioFile != null && !audioFile.isEmpty()) {
-            String audioUrl = cloudinaryService.uploadQuestionAudio(
+            String audioUrl = localStorageService.uploadQuestionAudio(
                     audioFile, question.getQuiz().getId(), question.getId());
             question.setAudioUrl(audioUrl);
 
             // Xóa âm thanh cũ nếu có
             if (oldAudioUrl != null && !oldAudioUrl.isEmpty()) {
-                cloudinaryService.deleteQuestionAudio(oldAudioUrl);
+                localStorageService.deleteQuestionAudio(oldAudioUrl);
             }
         }
     }
@@ -348,12 +348,12 @@ public class QuestionService {
     private void deleteQuestionMedia(Question question) {
         // Xóa hình ảnh nếu có
         if (question.getImageUrl() != null && !question.getImageUrl().isEmpty()) {
-            cloudinaryService.deleteQuestionImage(question.getImageUrl());
+            localStorageService.deleteQuestionImage(question.getImageUrl());
         }
 
         // Xóa âm thanh nếu có
         if (question.getAudioUrl() != null && !question.getAudioUrl().isEmpty()) {
-            cloudinaryService.deleteQuestionAudio(question.getAudioUrl());
+            localStorageService.deleteQuestionAudio(question.getAudioUrl());
         }
     }
 }

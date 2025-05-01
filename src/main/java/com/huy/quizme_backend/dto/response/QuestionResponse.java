@@ -2,7 +2,7 @@ package com.huy.quizme_backend.dto.response;
 
 import com.huy.quizme_backend.enity.Question;
 import com.huy.quizme_backend.enity.QuestionOption;
-import com.huy.quizme_backend.service.CloudinaryService;
+import com.huy.quizme_backend.service.LocalStorageService;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -49,12 +49,12 @@ public class QuestionResponse {
     }
     
     // Chuyển đổi từ Question entity sang QuestionResponse DTO (không bao gồm options) với Cloudinary URL
-    public static QuestionResponse fromQuestion(Question question, CloudinaryService cloudinaryService) {
+    public static QuestionResponse fromQuestion(Question question, LocalStorageService localStorageService) {
         QuestionResponse response = fromQuestion(question);
         if (question.getImageUrl() != null && !question.getImageUrl().isEmpty()) {
-            response.setImageUrl(cloudinaryService.getQuestionImageUrl(question.getImageUrl()));
+            response.setImageUrl(localStorageService.getQuestionImageUrl(question.getImageUrl()));
         } else if (question.getAudioUrl() != null && !question.getAudioUrl().isEmpty()) {
-            response.setAudioUrl(cloudinaryService.getQuestionAudioUrl(question.getAudioUrl()));
+            response.setAudioUrl(localStorageService.getQuestionAudioUrl(question.getAudioUrl()));
         }
         return response;
     }
@@ -71,8 +71,8 @@ public class QuestionResponse {
     }
     
     // Chuyển đổi từ Question entity sang QuestionResponse DTO kèm options với Cloudinary URL
-    public static QuestionResponse fromQuestionWithOptions(Question question, List<QuestionOption> options, CloudinaryService cloudinaryService) {
-        QuestionResponse response = fromQuestion(question, cloudinaryService);
+    public static QuestionResponse fromQuestionWithOptions(Question question, List<QuestionOption> options, LocalStorageService localStorageService) {
+        QuestionResponse response = fromQuestion(question, localStorageService);
         if (options != null) {
             response.setOptions(options.stream()
                     .map(QuestionOptionResponse::fromQuestionOption)

@@ -30,7 +30,7 @@ public class QuizService {
     private final QuizRepository quizRepository;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
-    private final CloudinaryService cloudinaryService;
+    private final LocalStorageService localStorageService;
 
     /**
      * Lấy danh sách tất cả các quiz
@@ -40,7 +40,7 @@ public class QuizService {
     public List<QuizResponse> getAllQuizzes() {
         return quizRepository.findAll().
                 stream()
-                .map(quiz -> QuizResponse.fromQuiz(quiz, cloudinaryService))
+                .map(quiz -> QuizResponse.fromQuiz(quiz, localStorageService))
                 .collect(Collectors.toList());
     }
 
@@ -54,7 +54,7 @@ public class QuizService {
         Quiz quiz = quizRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Quiz not found with id: " + id));
-        return QuizResponse.fromQuiz(quiz, cloudinaryService);
+        return QuizResponse.fromQuiz(quiz, localStorageService);
     }
 
     /**
@@ -65,7 +65,7 @@ public class QuizService {
     public List<QuizResponse> getPublicQuizzes() {
         return quizRepository.findByIsPublicTrue()
                 .stream()
-                .map(quiz -> QuizResponse.fromQuiz(quiz, cloudinaryService))
+                .map(quiz -> QuizResponse.fromQuiz(quiz, localStorageService))
                 .collect(Collectors.toList());
     }
 
@@ -78,7 +78,7 @@ public class QuizService {
     public List<QuizResponse> getQuizzesByDifficulty(Difficulty difficulty) {
         return quizRepository.findByDifficulty(difficulty)
                 .stream()
-                .map(quiz -> QuizResponse.fromQuiz(quiz, cloudinaryService))
+                .map(quiz -> QuizResponse.fromQuiz(quiz, localStorageService))
                 .collect(Collectors.toList());
     }
     
@@ -134,7 +134,7 @@ public class QuizService {
         
         List<QuizResponse> quizResponses = quizPage.getContent()
                 .stream()
-                .map(quiz -> QuizResponse.fromQuiz(quiz, cloudinaryService))
+                .map(quiz -> QuizResponse.fromQuiz(quiz, localStorageService))
                 .collect(Collectors.toList());
         
         return PageResponse.<QuizResponse>builder()
@@ -187,7 +187,7 @@ public class QuizService {
         // Lưu thumbnail vào Cloudinary (nếu có)
         if (quizRequest.getThumbnailFile() != null && !quizRequest.getThumbnailFile().isEmpty()) {
             // Tải lên Cloudinary và lấy tên file
-            String thumbnailUrl = cloudinaryService.uploadQuizThumbnail(
+            String thumbnailUrl = localStorageService.uploadQuizThumbnail(
                     quizRequest.getThumbnailFile(),
                     savedQuiz.getId()
             );
@@ -206,7 +206,7 @@ public class QuizService {
         }
         
         // Trả về response
-        return QuizResponse.fromQuiz(savedQuiz, cloudinaryService);
+        return QuizResponse.fromQuiz(savedQuiz, localStorageService);
     }
     
     /**
@@ -264,7 +264,7 @@ public class QuizService {
             String oldThumbnailUrl = quiz.getQuizThumbnails();
             
             // Tải lên Cloudinary và lấy tên file mới
-            String thumbnailUrl = cloudinaryService.uploadQuizThumbnail(
+            String thumbnailUrl = localStorageService.uploadQuizThumbnail(
                     quizRequest.getThumbnailFile(),
                     quiz.getId()
             );
@@ -274,7 +274,7 @@ public class QuizService {
             
             // Xóa thumbnail cũ từ Cloudinary (nếu có)
             if (oldThumbnailUrl != null && !oldThumbnailUrl.isEmpty()) {
-                cloudinaryService.deleteQuizThumbnail(oldThumbnailUrl);
+                localStorageService.deleteQuizThumbnail(oldThumbnailUrl);
             }
         }
         
@@ -289,7 +289,7 @@ public class QuizService {
         Quiz updatedQuiz = quizRepository.save(quiz);
         
         // Trả về response
-        return QuizResponse.fromQuiz(updatedQuiz, cloudinaryService);
+        return QuizResponse.fromQuiz(updatedQuiz, localStorageService);
     }
     
     /**
@@ -324,7 +324,7 @@ public class QuizService {
         
         // Xóa thumbnail từ Cloudinary nếu có
         if (quiz.getQuizThumbnails() != null && !quiz.getQuizThumbnails().isEmpty()) {
-            cloudinaryService.deleteQuizThumbnail(quiz.getQuizThumbnails());
+            localStorageService.deleteQuizThumbnail(quiz.getQuizThumbnails());
         }
         
         // Xóa quiz từ database

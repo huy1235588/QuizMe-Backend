@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -30,6 +31,17 @@ public class UserController {
     public ApiResponse<UserResponse> getUserById(@PathVariable Long id) {
         UserResponse user = userService.getUserById(id);
         return ApiResponse.success(user, "User retrieved successfully");
+    }
+
+    /**
+     * API lấy danh sách người dùng có tổng số quiz được chơi nhiều nhất
+     * @return Danh sách người dùng
+     */
+    @GetMapping("/top")
+    @ResponseStatus(HttpStatus.OK)
+    public ApiResponse<List<UserResponse>> getTopUsersByTotalQuizPlays() {
+        List<UserResponse> topUsers = userService.getTopUsersByTotalQuizPlays();
+        return ApiResponse.success(topUsers, "Top users retrieved successfully");
     }
     
     /**

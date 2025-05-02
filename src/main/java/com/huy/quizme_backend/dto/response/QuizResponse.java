@@ -21,6 +21,7 @@ public class QuizResponse {
     private String categoryName;
     private Long creatorId;
     private String creatorName;
+    private String creatorAvatar;
     private Difficulty difficulty;
     private Boolean isPublic;
     private Integer playCount;
@@ -37,6 +38,7 @@ public class QuizResponse {
                 .quizThumbnails(quiz.getQuizThumbnails())
                 .categoryId(quiz.getCategory() != null ? quiz.getCategory().getId() : null)
                 .categoryName(quiz.getCategory() != null ? quiz.getCategory().getName() : null)
+                .creatorAvatar(quiz.getCreator().getProfileImage())
                 .creatorId(quiz.getCreator().getId())
                 .creatorName(quiz.getCreator().getFullName())
                 .difficulty(quiz.getDifficulty())
@@ -47,13 +49,19 @@ public class QuizResponse {
                 .updatedAt(quiz.getUpdatedAt() != null ? quiz.getUpdatedAt().toString() : null)
                 .build();
     }
-    
+
     // Chuyển đổi từ Quiz entity sang QuizResponse DTO với Cloudinary URL
     public static QuizResponse fromQuiz(Quiz quiz, LocalStorageService localStorageService) {
         QuizResponse response = fromQuiz(quiz);
         if (quiz.getQuizThumbnails() != null && !quiz.getQuizThumbnails().isEmpty()) {
             response.setQuizThumbnails(localStorageService.getQuizThumbnailUrl(quiz.getQuizThumbnails()));
         }
+
+        // Nếu có ảnh đại diện của người tạo quiz
+        if (quiz.getCreator().getProfileImage() != null && !quiz.getCreator().getProfileImage().isEmpty()) {
+            response.setCreatorAvatar(localStorageService.getProfileImageUrl(quiz.getCreator().getProfileImage()));
+        }
+
         return response;
     }
 }

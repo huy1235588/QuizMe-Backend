@@ -2,8 +2,10 @@ package com.huy.quizme_backend.repository;
 
 import com.huy.quizme_backend.enity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -22,4 +24,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     // Kiểm tra email đã tồn tại chưa
     Boolean existsByEmail(String email);
+
+    // Lấy Top người dùng có tổng số quiz được chơi nhiều nhất
+    @Query("SELECT u " +
+            "FROM User u " +
+            "LEFT JOIN Quiz q ON u.id = q.creator.id " +
+            "GROUP BY u.id " +
+            "ORDER BY SUM(q.playCount) DESC")
+    List<User> findTopUsersByTotalQuizPlays();
 }

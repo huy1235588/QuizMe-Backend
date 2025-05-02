@@ -1,5 +1,6 @@
 package com.huy.quizme_backend.dto.response;
 
+import com.huy.quizme_backend.enity.Category;
 import com.huy.quizme_backend.enity.Difficulty;
 import com.huy.quizme_backend.enity.Quiz;
 import com.huy.quizme_backend.service.LocalStorageService;
@@ -7,6 +8,9 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Data
 @NoArgsConstructor
@@ -17,8 +21,8 @@ public class QuizResponse {
     private String title;
     private String description;
     private String quizThumbnails;
-    private Long categoryId;
-    private String categoryName;
+    private List<Long> categoryIds;
+    private List<String> categoryNames;
     private Long creatorId;
     private String creatorName;
     private String creatorAvatar;
@@ -36,8 +40,12 @@ public class QuizResponse {
                 .title(quiz.getTitle())
                 .description(quiz.getDescription())
                 .quizThumbnails(quiz.getQuizThumbnails())
-                .categoryId(quiz.getCategory() != null ? quiz.getCategory().getId() : null)
-                .categoryName(quiz.getCategory() != null ? quiz.getCategory().getName() : null)
+                .categoryIds(quiz.getCategories() != null ?
+                        quiz.getCategories().stream().map(Category::getId).collect(Collectors.toList()) :
+                        null)
+                .categoryNames(quiz.getCategories() != null ?
+                        quiz.getCategories().stream().map(Category::getName).collect(Collectors.toList()) :
+                        null)
                 .creatorAvatar(quiz.getCreator().getProfileImage())
                 .creatorId(quiz.getCreator().getId())
                 .creatorName(quiz.getCreator().getFullName())

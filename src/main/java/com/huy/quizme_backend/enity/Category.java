@@ -10,8 +10,8 @@ import java.util.List;
 
 @Entity
 @Table(
-    name = "category",
-    uniqueConstraints = @UniqueConstraint(columnNames = "name")
+        name = "category",
+        uniqueConstraints = @UniqueConstraint(columnNames = "name")
 )
 @Getter
 @Setter
@@ -50,5 +50,6 @@ public class Category {
     private LocalDateTime updatedAt;
 
     // Relationships
-    @OneToMany(mappedBy = "category")
-    private List<Quiz> quizzes;}
+    @ManyToMany(mappedBy = "categories")
+    private List<Quiz> quizzes;
+}

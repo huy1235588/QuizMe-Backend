@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -136,7 +137,7 @@ public class QuizService {
                 .stream()
                 .map(quiz -> QuizResponse.fromQuiz(quiz, localStorageService))
                 .collect(Collectors.toList());
-        
+
         return PageResponse.<QuizResponse>builder()
                 .content(quizResponses)
                 .pageNumber(quizPage.getNumber())
@@ -161,19 +162,23 @@ public class QuizService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Creator not found with id: " + creatorId));
         
-        // Tìm category nếu có
-        Category category = null;
-        if (quizRequest.getCategoryId() != null) {
-            category = categoryRepository.findById(quizRequest.getCategoryId())
-                    .orElseThrow(() -> new ResponseStatusException(
-                            HttpStatus.NOT_FOUND, "Category not found with id: " + quizRequest.getCategoryId()));
+        // Tìm các category nếu có
+        List<Category> categories = new ArrayList<>();
+        if (quizRequest.getCategoryIds() != null) {
+            categories = categoryRepository.findAllById(quizRequest.getCategoryIds());
+
+            // Kiểm tra xem tất cả các category có tồn tại không
+            if (categories.size() != quizRequest.getCategoryIds().size()) {
+                throw new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Some categories not found");
+            }
         }
         
         // Tạo mới đối tượng Quiz
         Quiz quiz = Quiz.builder()
                 .title(quizRequest.getTitle())
                 .description(quizRequest.getDescription())
-                .category(category)
+                .categories(categories)
                 .creator(creator)
                 .difficulty(quizRequest.getDifficulty())
                 .isPublic(quizRequest.getIsPublic())
@@ -200,7 +205,7 @@ public class QuizService {
         }
         
         // Cập nhật số lượng quiz trong category
-        if (category != null) {
+        for (Category category : categories) {
             category.setQuizCount(category.getQuizCount() + 1);
             categoryRepository.save(category);
         }
@@ -233,29 +238,39 @@ public class QuizService {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN, "You don't have permission to update this quiz");
         }
-        
-        // Tìm category mới nếu có thay đổi
-        Category newCategory = null;
-        if (quizRequest.getCategoryId() != null) {
-            newCategory = categoryRepository.findById(quizRequest.getCategoryId())
-                    .orElseThrow(() -> new ResponseStatusException(
-                            HttpStatus.NOT_FOUND, "Category not found with id: " + quizRequest.getCategoryId()));
-        }
-        
-        // Nếu có thay đổi category, cập nhật số lượng quiz trong cả category cũ và mới
-        if (quizRequest.getCategoryId() != null && 
-                (quiz.getCategory() == null || !quiz.getCategory().getId().equals(quizRequest.getCategoryId()))) {
-            
-            // Giảm số lượng quiz trong category cũ (nếu có)
-            if (quiz.getCategory() != null) {
-                Category oldCategory = quiz.getCategory();
-                oldCategory.setQuizCount(oldCategory.getQuizCount() - 1);
-                categoryRepository.save(oldCategory);
+
+        // Xử lý cập nhật categories
+        List<Category> newCategories = new ArrayList<>();
+        List<Category> oldCategories = new ArrayList<>(quiz.getCategories());
+
+        if (quizRequest.getCategoryIds() != null) {
+            newCategories = categoryRepository.findAllById(quizRequest.getCategoryIds());
+
+            // Kiểm tra xem có category nào không tìm thấy không
+            if (!quizRequest.getCategoryIds().isEmpty() &&
+                    newCategories.size() != quizRequest.getCategoryIds().size()) {
+                throw new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "One or more categories not found");
             }
-            
-            // Tăng số lượng quiz trong category mới
-            newCategory.setQuizCount(newCategory.getQuizCount() + 1);
-            categoryRepository.save(newCategory);
+
+            // Giảm quiz count của các category cũ không còn trong danh sách mới
+            for (Category oldCategory : oldCategories) {
+                if (!newCategories.contains(oldCategory)) {
+                    oldCategory.setQuizCount(oldCategory.getQuizCount() - 1);
+                    categoryRepository.save(oldCategory);
+                }
+            }
+
+            // Tăng quiz count của các category mới chưa có trong danh sách cũ
+            for (Category newCategory : newCategories) {
+                if (!oldCategories.contains(newCategory)) {
+                    newCategory.setQuizCount(newCategory.getQuizCount() + 1);
+                    categoryRepository.save(newCategory);
+                }
+            }
+
+            // Cập nhật danh sách categories trong quiz
+            quiz.setCategories(newCategories);
         }
         
         // Nếu có file thumbnail mới, tải lên Cloudinary và xóa file cũ
@@ -281,7 +296,6 @@ public class QuizService {
         // Cập nhật thông tin quiz
         quiz.setTitle(quizRequest.getTitle());
         quiz.setDescription(quizRequest.getDescription());
-        quiz.setCategory(newCategory != null ? newCategory : quiz.getCategory());
         quiz.setDifficulty(quizRequest.getDifficulty());
         quiz.setIsPublic(quizRequest.getIsPublic());
         
@@ -314,12 +328,13 @@ public class QuizService {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN, "You don't have permission to delete this quiz");
         }
-        
-        // Nếu quiz có category, cập nhật số lượng quiz trong category
-        if (quiz.getCategory() != null) {
-            Category category = quiz.getCategory();
-            category.setQuizCount(category.getQuizCount() - 1);
-            categoryRepository.save(category);
+
+        // Cập nhật số lượng quiz trong các categories
+        if (quiz.getCategories() != null) {
+            for (Category category : quiz.getCategories()) {
+                category.setQuizCount(category.getQuizCount() - 1);
+                categoryRepository.save(category);
+            }
         }
         
         // Xóa thumbnail từ Cloudinary nếu có

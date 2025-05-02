@@ -12,10 +12,10 @@ import java.util.List;
 @Table(
     name = "quiz",
     indexes = {
-        @Index(name = "idx_category_id", columnList = "category_id"),
         @Index(name = "idx_creator_id", columnList = "creator_id"),
         @Index(name = "idx_difficulty", columnList = "difficulty"),
-        @Index(name = "idx_is_public", columnList = "is_public")
+        @Index(name = "idx_is_public", columnList = "is_public"),
+        @Index(name = "idx_play_count", columnList = "play_count")
     }
 )
 @Getter
@@ -31,15 +31,11 @@ public class Quiz {
     @Column(nullable = false, length = 100)
     private String title;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(length = 1000)
     private String description;
 
     @Column(name = "quiz_thumbnails", length = 255)
     private String quizThumbnails;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id")
-    private Category category;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "creator_id", nullable = false)
@@ -66,7 +62,15 @@ public class Quiz {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // Relationships
+    // Updated relationship to match database schema
+    @ManyToMany
+    @JoinTable(
+        name = "quiz_category",
+        joinColumns = @JoinColumn(name = "quiz_id"),
+        inverseJoinColumns = @JoinColumn(name = "category_id")
+    )
+    private List<Category> categories;
+
     @OneToMany(mappedBy = "quiz", cascade = CascadeType.ALL)
     private List<Question> questions;
 }

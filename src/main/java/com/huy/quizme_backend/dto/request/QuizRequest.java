@@ -10,6 +10,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -23,7 +25,7 @@ public class QuizRequest {
     
     private MultipartFile thumbnailFile;
     
-    private Long categoryId;
+    private List<Long> categoryIds;
     
     private Difficulty difficulty = Difficulty.MEDIUM;
     

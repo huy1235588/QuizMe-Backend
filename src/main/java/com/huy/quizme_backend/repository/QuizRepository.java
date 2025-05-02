@@ -14,16 +14,17 @@ import java.util.List;
 @Repository
 public interface QuizRepository extends JpaRepository<Quiz, Long> {
     List<Quiz> findByIsPublicTrue();
+
     List<Quiz> findByDifficulty(Difficulty difficulty);
-    
+
     // Updated query to handle many-to-many relationship with categories
     @Query("SELECT DISTINCT q FROM Quiz q " +
-           "LEFT JOIN q.categories c " +
-           "WHERE (:categoryId IS NULL OR c.id = :categoryId) " +
-           "AND (:difficulty IS NULL OR q.difficulty = :difficulty) " +
-           "AND (:isPublic IS NULL OR q.isPublic = :isPublic) " +
-           "AND (:search IS NULL OR LOWER(q.title) LIKE LOWER(CONCAT('%', :search, '%')) " +
-           "     OR LOWER(q.description) LIKE LOWER(CONCAT('%', :search, '%')))")
+            "LEFT JOIN q.categories c " +
+            "WHERE (:categoryId IS NULL OR c.id = :categoryId) " +
+            "AND (:difficulty IS NULL OR q.difficulty = :difficulty) " +
+            "AND (:isPublic IS NULL OR q.isPublic = :isPublic) " +
+            "AND (:search IS NULL OR LOWER(q.title) LIKE LOWER(CONCAT('%', :search, '%')) " +
+            "     OR LOWER(q.description) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<Quiz> findQuizzesWithFilters(
             @Param("categoryId") Long categoryId,
             @Param("difficulty") Difficulty difficulty,
@@ -33,25 +34,43 @@ public interface QuizRepository extends JpaRepository<Quiz, Long> {
 
     // Phương thức tìm kiếm quiz theo tab
     @Query("SELECT DISTINCT q FROM Quiz q " +
-           "WHERE (:tab = 'newest' OR :tab IS NULL) " +
-           "ORDER BY q.createdAt DESC")
+            "WHERE (:tab = 'newest' OR :tab IS NULL) " +
+            "AND (:categoryId IS NULL OR :categoryId IN (SELECT c.id FROM q.categories c)) " +
+            "AND (:difficulty IS NULL OR q.difficulty = :difficulty) " +
+            "AND (:isPublic IS NULL OR q.isPublic = :isPublic) " +
+            "AND (:search IS NULL OR LOWER(q.title) LIKE LOWER(CONCAT('%', :search, '%')) " +
+            "OR LOWER(q.description) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "ORDER BY q.createdAt DESC")
     Page<Quiz> findNewestQuizzes(
             @Param("tab") String tab,
+            @Param("categoryId") Long categoryId,
+            @Param("difficulty") Difficulty difficulty,
+            @Param("isPublic") Boolean isPublic,
+            @Param("search") String search,
             Pageable pageable);
 
     @Query("SELECT DISTINCT q FROM Quiz q " +
-           "WHERE :tab = 'popular' " +
-           "ORDER BY q.playCount DESC")
+            "WHERE :tab = 'popular' " +
+            "AND (:categoryId IS NULL OR :categoryId IN (SELECT c.id FROM q.categories c)) " +
+            "AND (:difficulty IS NULL OR q.difficulty = :difficulty) " +
+            "AND (:isPublic IS NULL OR q.isPublic = :isPublic) " +
+            "AND (:search IS NULL OR LOWER(q.title) LIKE LOWER(CONCAT('%', :search, '%')) " +
+            "OR LOWER(q.description) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "ORDER BY q.playCount DESC")
     Page<Quiz> findPopularQuizzes(
             @Param("tab") String tab,
+            @Param("categoryId") Long categoryId,
+            @Param("difficulty") Difficulty difficulty,
+            @Param("isPublic") Boolean isPublic,
+            @Param("search") String search,
             Pageable pageable);
-            
+
     // Find quizzes by creator ID
     List<Quiz> findByCreatorId(Long creatorId);
-    
+
     // Find quizzes by creator ID with pagination
     Page<Quiz> findByCreatorId(Long creatorId, Pageable pageable);
-    
+
     // Find public quizzes with pagination
     Page<Quiz> findByIsPublicTrue(Pageable pageable);
 }

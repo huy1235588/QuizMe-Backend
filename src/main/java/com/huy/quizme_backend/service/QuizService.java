@@ -82,33 +82,33 @@ public class QuizService {
                 .map(quiz -> QuizResponse.fromQuiz(quiz, localStorageService))
                 .collect(Collectors.toList());
     }
-    
+
     /**
      * Lấy danh sách các quiz theo phân trang và lọc
      *
-     * @param page Số trang (bắt đầu từ 0)
-     * @param pageSize Số lượng kết quả mỗi trang
+     * @param page       Số trang (bắt đầu từ 0)
+     * @param pageSize   Số lượng kết quả mỗi trang
      * @param categoryId ID của category cần lọc
-     * @param search Từ khóa tìm kiếm
+     * @param search     Từ khóa tìm kiếm
      * @param difficulty Độ khó của quiz
-     * @param sort Cách sắp xếp kết quả
-     * @param isPublic Trạng thái công khai
-     * @param tab Tab hiện tại (newest, popular)
+     * @param sort       Cách sắp xếp kết quả
+     * @param isPublic   Trạng thái công khai
+     * @param tab        Tab hiện tại (newest, popular)
      * @return Danh sách các QuizResponse theo trang
      */
     public PageResponse<QuizResponse> getPagedQuizzes(
-            int page, 
-            int pageSize, 
-            Long categoryId, 
-            String search, 
-            Difficulty difficulty, 
-            String sort, 
-            Boolean isPublic, 
+            int page,
+            int pageSize,
+            Long categoryId,
+            String search,
+            Difficulty difficulty,
+            String sort,
+            Boolean isPublic,
             String tab) {
-        
+
         Pageable pageable;
         Page<Quiz> quizPage;
-        
+
         // Xử lý sắp xếp
         if (sort != null) {
             pageable = switch (sort) {
@@ -119,12 +119,14 @@ public class QuizService {
         } else {
             pageable = PageRequest.of(page, pageSize);
         }
-        
+
         // Xử lý tab
         if (tab != null) {
             quizPage = switch (tab) {
-                case "newest" -> quizRepository.findNewestQuizzes(tab, pageable);
-                case "popular" -> quizRepository.findPopularQuizzes(tab, pageable);
+                case "newest" -> quizRepository.findNewestQuizzes(
+                        tab, categoryId, difficulty, isPublic, search, pageable);
+                case "popular" -> quizRepository.findPopularQuizzes(
+                        tab, categoryId, difficulty, isPublic, search, pageable);
                 default -> quizRepository.findQuizzesWithFilters(
                         categoryId, difficulty, isPublic, search, pageable);
             };
@@ -132,7 +134,7 @@ public class QuizService {
             quizPage = quizRepository.findQuizzesWithFilters(
                     categoryId, difficulty, isPublic, search, pageable);
         }
-        
+
         List<QuizResponse> quizResponses = quizPage.getContent()
                 .stream()
                 .map(quiz -> QuizResponse.fromQuiz(quiz, localStorageService))
@@ -152,7 +154,7 @@ public class QuizService {
      * Tạo mới quiz
      *
      * @param quizRequest Thông tin quiz cần tạo
-     * @param creatorId ID của người tạo
+     * @param creatorId   ID của người tạo
      * @return QuizResponse của quiz đã tạo
      */
     @Transactional
@@ -161,7 +163,7 @@ public class QuizService {
         User creator = userRepository.findById(creatorId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Creator not found with id: " + creatorId));
-        
+
         // Tìm các category nếu có
         List<Category> categories = new ArrayList<>();
         if (quizRequest.getCategoryIds() != null) {
@@ -173,7 +175,7 @@ public class QuizService {
                         HttpStatus.NOT_FOUND, "Some categories not found");
             }
         }
-        
+
         // Tạo mới đối tượng Quiz
         Quiz quiz = Quiz.builder()
                 .title(quizRequest.getTitle())
@@ -185,10 +187,10 @@ public class QuizService {
                 .playCount(0)
                 .questionCount(0)
                 .build();
-        
+
         // Lưu vào database và lấy ID
         Quiz savedQuiz = quizRepository.save(quiz);
-        
+
         // Lưu thumbnail vào Cloudinary (nếu có)
         if (quizRequest.getThumbnailFile() != null && !quizRequest.getThumbnailFile().isEmpty()) {
             // Tải lên Cloudinary và lấy tên file
@@ -196,29 +198,29 @@ public class QuizService {
                     quizRequest.getThumbnailFile(),
                     savedQuiz.getId()
             );
-            
+
             // Cập nhật URL thumbnail trong quiz
             savedQuiz.setQuizThumbnails(thumbnailUrl);
-            
+
             // Lưu lại quiz với URL thumbnail mới
             quizRepository.save(savedQuiz);
         }
-        
+
         // Cập nhật số lượng quiz trong category
         for (Category category : categories) {
             category.setQuizCount(category.getQuizCount() + 1);
             categoryRepository.save(category);
         }
-        
+
         // Trả về response
         return QuizResponse.fromQuiz(savedQuiz, localStorageService);
     }
-    
+
     /**
      * Cập nhật thông tin quiz
      *
-     * @param id ID của quiz cần cập nhật
-     * @param quizRequest Thông tin mới của quiz
+     * @param id            ID của quiz cần cập nhật
+     * @param quizRequest   Thông tin mới của quiz
      * @param currentUserId ID của người dùng hiện tại
      * @return QuizResponse của quiz đã cập nhật
      */
@@ -228,12 +230,12 @@ public class QuizService {
         Quiz quiz = quizRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Quiz not found with id: " + id));
-        
+
         // Kiểm tra quyền truy cập (chỉ người tạo quiz hoặc admin mới có quyền cập nhật)
         User currentUser = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "User not found with id: " + currentUserId));
-        
+
         if (!quiz.getCreator().getId().equals(currentUserId) && currentUser.getRole() != Role.ADMIN) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN, "You don't have permission to update this quiz");
@@ -272,44 +274,44 @@ public class QuizService {
             // Cập nhật danh sách categories trong quiz
             quiz.setCategories(newCategories);
         }
-        
+
         // Nếu có file thumbnail mới, tải lên Cloudinary và xóa file cũ
         if (quizRequest.getThumbnailFile() != null && !quizRequest.getThumbnailFile().isEmpty()) {
             // Lưu URL thumbnail cũ để xóa sau khi upload thành công
             String oldThumbnailUrl = quiz.getQuizThumbnails();
-            
+
             // Tải lên Cloudinary và lấy tên file mới
             String thumbnailUrl = localStorageService.uploadQuizThumbnail(
                     quizRequest.getThumbnailFile(),
                     quiz.getId()
             );
-            
+
             // Cập nhật URL thumbnail trong quiz
             quiz.setQuizThumbnails(thumbnailUrl);
-            
+
             // Xóa thumbnail cũ từ Cloudinary (nếu có)
             if (oldThumbnailUrl != null && !oldThumbnailUrl.isEmpty()) {
                 localStorageService.deleteQuizThumbnail(oldThumbnailUrl);
             }
         }
-        
+
         // Cập nhật thông tin quiz
         quiz.setTitle(quizRequest.getTitle());
         quiz.setDescription(quizRequest.getDescription());
         quiz.setDifficulty(quizRequest.getDifficulty());
         quiz.setIsPublic(quizRequest.getIsPublic());
-        
+
         // Lưu vào database
         Quiz updatedQuiz = quizRepository.save(quiz);
-        
+
         // Trả về response
         return QuizResponse.fromQuiz(updatedQuiz, localStorageService);
     }
-    
+
     /**
      * Xóa quiz
-     * 
-     * @param id ID của quiz cần xóa
+     *
+     * @param id            ID của quiz cần xóa
      * @param currentUserId ID của người dùng hiện tại
      */
     @Transactional
@@ -318,12 +320,12 @@ public class QuizService {
         Quiz quiz = quizRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Quiz not found with id: " + id));
-        
+
         // Kiểm tra quyền truy cập (chỉ người tạo quiz hoặc admin mới có quyền xóa)
         User currentUser = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "User not found with id: " + currentUserId));
-        
+
         if (!quiz.getCreator().getId().equals(currentUserId) && currentUser.getRole() != Role.ADMIN) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN, "You don't have permission to delete this quiz");
@@ -336,12 +338,12 @@ public class QuizService {
                 categoryRepository.save(category);
             }
         }
-        
+
         // Xóa thumbnail từ Cloudinary nếu có
         if (quiz.getQuizThumbnails() != null && !quiz.getQuizThumbnails().isEmpty()) {
             localStorageService.deleteQuizThumbnail(quiz.getQuizThumbnails());
         }
-        
+
         // Xóa quiz từ database
         quizRepository.deleteById(id);
     }

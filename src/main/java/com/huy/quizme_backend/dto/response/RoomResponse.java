@@ -19,6 +19,8 @@ public class RoomResponse {
     private String code;
     private QuizResponse quiz;
     private UserResponse host;
+    private boolean hasPassword;
+    private Boolean isPublic;
     private int currentPlayerCount;
     private int maxPlayers;
     private String status;
@@ -34,6 +36,8 @@ public class RoomResponse {
                 .code(room.getCode())
                 .quiz(QuizResponse.fromQuiz(room.getQuiz(), localStorageService))
                 .host(UserResponse.fromUser(room.getHost(), localStorageService))
+                .hasPassword(room.getPassword() != null && !room.getPassword().isEmpty())
+                .isPublic(room.getIsPublic())
                 .maxPlayers(room.getMaxPlayers())
                 .status(room.getStatus().name())
                 .startTime(room.getStartTime())

@@ -19,4 +19,8 @@ public class RoomRequest {
 
     @Min(value = 2, message = "Room must allow at least 2 players")
     private int maxPlayers = 10;
+
+    private String password;
+
+    private Boolean isPublic = true;
 }

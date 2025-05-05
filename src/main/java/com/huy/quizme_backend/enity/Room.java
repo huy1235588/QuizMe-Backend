@@ -39,6 +39,12 @@ public class Room {
     @JoinColumn(name = "host_id", nullable = false)
     private User host;
 
+    private String password;
+
+    @Builder.Default
+    private Boolean isPublic = true;
+
+    @Builder.Default
     private int maxPlayers = 10;
 
     @Enumerated(EnumType.STRING)

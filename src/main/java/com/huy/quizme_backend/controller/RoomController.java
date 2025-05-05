@@ -1,5 +1,6 @@
 package com.huy.quizme_backend.controller;
 
+import com.huy.quizme_backend.dto.request.JoinRoomByIdRequest;
 import com.huy.quizme_backend.dto.request.JoinRoomRequest;
 import com.huy.quizme_backend.dto.request.RoomRequest;
 import com.huy.quizme_backend.dto.response.ApiResponse;
@@ -76,16 +77,16 @@ public class RoomController {
     /**
      * API tham gia phòng trực tiếp bằng ID
      *
-     * @param roomId    ID của phòng
-     * @param guestName Tên khách (nếu không đăng nhập)
-     * @param principal Thông tin người dùng hiện tại (có thể null)
+     * @param roomId      ID của phòng
+     * @param joinRequest Yêu cầu tham gia phòng
+     * @param principal   Thông tin người dùng hiện tại (có thể null)
      * @return Thông tin phòng
      */
     @PostMapping("/join/{roomId}")
     @ResponseStatus(HttpStatus.OK)
     public ApiResponse<RoomResponse> joinRoomById(
             @PathVariable Long roomId,
-            @RequestParam(required = false) String guestName,
+            @RequestBody(required = false) JoinRoomByIdRequest joinRequest,
             Principal principal
     ) {
         // Lấy user ID nếu người dùng đã đăng nhập
@@ -95,8 +96,11 @@ public class RoomController {
             userId = currentUser.getId();
         }
 
+        String guestName = joinRequest != null ? joinRequest.getGuestName() : null;
+        String password = joinRequest != null ? joinRequest.getPassword() : null;
+
         // Tham gia phòng theo ID
-        RoomResponse room = roomService.joinRoomById(roomId, userId, guestName);
+        RoomResponse room = roomService.joinRoomById(roomId, userId, guestName, password);
 
         return ApiResponse.success(room, "Joined room successfully");
     }
@@ -104,7 +108,7 @@ public class RoomController {
     /**
      * API rời phòng
      *
-     * @param roomId ID của phòng
+     * @param roomId    ID của phòng
      * @param guestName Tên khách (nếu là khách)
      * @param principal Thông tin người dùng hiện tại (có thể null)
      * @return Thông báo thành công
@@ -130,7 +134,7 @@ public class RoomController {
     /**
      * API đóng phòng (chỉ host mới có quyền)
      *
-     * @param roomId ID của phòng
+     * @param roomId    ID của phòng
      * @param principal Thông tin người dùng hiện tại
      * @return Thông tin phòng đã đóng
      */

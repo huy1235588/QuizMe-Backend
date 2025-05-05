@@ -79,6 +79,8 @@ public class RoomService {
                 .code(roomCode)
                 .quiz(quiz)
                 .host(host)
+                .password(roomRequest.getPassword())
+                .isPublic(roomRequest.getIsPublic())
                 .maxPlayers(roomRequest.getMaxPlayers())
                 .status(Room.Status.waiting)
                 .build();
@@ -112,6 +114,16 @@ public class RoomService {
         Room room = roomRepository.findByCode(joinRequest.getRoomCode())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Room not found with code: " + joinRequest.getRoomCode()));
+
+        // Kiểm tra xem phòng có yêu cầu mật khẩu không
+        if (room.getPassword() != null && !room.getPassword().isEmpty()) {
+            if (joinRequest.getPassword() == null || joinRequest.getPassword().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Room password is required");
+            }
+            if (!room.getPassword().equals(joinRequest.getPassword())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid room password");
+            }
+        }
 
         // Kiểm tra xem phòng còn chỗ không
         if (participantRepository.findByRoom(room).size() >= room.getMaxPlayers()) {
@@ -176,14 +188,30 @@ public class RoomService {
      * @param roomId    ID của phòng
      * @param userId    ID của người dùng (có thể null nếu là khách)
      * @param guestName Tên khách (bắt buộc nếu userId là null)
+     * @param password  Mật khẩu phòng (nếu có)
      * @return Thông tin phòng
      */
     @Transactional
-    public RoomResponse joinRoomById(Long roomId, Long userId, String guestName) {
+    public RoomResponse joinRoomById(
+            Long roomId,
+            Long userId,
+            String guestName,
+            String password
+    ) {
         // Tìm phòng theo ID
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Room not found with id: " + roomId));
+
+        // Kiểm tra xem phòng có yêu cầu mật khẩu không
+        if (room.getPassword() != null && !room.getPassword().isEmpty()) {
+            if (password == null || password.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Room password is required");
+            }
+            if (!room.getPassword().equals(password)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid room password");
+            }
+        }
 
         // Kiểm tra xem phòng còn chỗ không
         if (participantRepository.countByRoom(room) >= room.getMaxPlayers()) {
@@ -370,7 +398,7 @@ public class RoomService {
      */
     public List<RoomResponse> getAvailableRooms(Long categoryId, String search) {
         // Chỉ lấy phòng đang chờ
-        List<Room> rooms = roomRepository.findByStatus(Room.Status.waiting);
+        List<Room> rooms = roomRepository.findByStatusAndIsPublic(Room.Status.waiting, true);
 
         // Lọc theo danh mục nếu có
         if (categoryId != null) {

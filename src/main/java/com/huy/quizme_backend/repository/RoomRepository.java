@@ -13,4 +13,5 @@ public interface RoomRepository extends JpaRepository<Room, Long> {
     Optional<Room> findByCode(String code);
     List<Room> findByHost(User host);
     List<Room> findByStatus(Room.Status status);
+    List<Room> findByStatusAndIsPublic(Room.Status status, Boolean isPublic);
 }

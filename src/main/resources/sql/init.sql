@@ -295,22 +295,30 @@ CREATE TABLE IF NOT EXISTS user_answer
 CREATE TABLE IF NOT EXISTS room
 (
     id          BIGINT AUTO_INCREMENT PRIMARY KEY,
-    name        VARCHAR(100),
-    code        VARCHAR(10) NOT NULL UNIQUE,
-    quiz_id     BIGINT      NOT NULL,
-    host_id     BIGINT      NOT NULL,
-    max_players INT                                                       DEFAULT 10,
-    status      ENUM ('waiting', 'in_progress', 'completed', 'cancelled') DEFAULT 'waiting',
-    start_time  TIMESTAMP   NULL                                          DEFAULT NULL,
-    end_time    TIMESTAMP   NULL                                          DEFAULT NULL,
+    name        VARCHAR(100) NOT NULL,
+    code        VARCHAR(10)  NOT NULL UNIQUE,
+    quiz_id     BIGINT       NOT NULL,
+    host_id     BIGINT       NOT NULL,
+    password    VARCHAR(255),
+    is_public   BOOLEAN           DEFAULT TRUE,
+    max_players INT               DEFAULT 10,
+    status      ENUM (
+        'waiting',
+        'in_progress',
+        'completed',
+        'cancelled')              DEFAULT 'waiting',
+    start_time  TIMESTAMP    NULL DEFAULT NULL,
+    end_time    TIMESTAMP    NULL DEFAULT NULL,
 
-    created_at  TIMESTAMP                                                 DEFAULT CURRENT_TIMESTAMP,
-    updated_at  TIMESTAMP                                                 DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_at  TIMESTAMP         DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP         DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     FOREIGN KEY (quiz_id) REFERENCES quiz (id) ON DELETE CASCADE,
     FOREIGN KEY (host_id) REFERENCES user (id) ON DELETE CASCADE,
+    index idx_quiz_id (quiz_id),
     INDEX idx_code (code),
     INDEX idx_host_id (host_id),
+    INDEX idx_is_public_status (is_public, status),
     INDEX idx_status (status),
     INDEX idx_created_at (created_at)
 );

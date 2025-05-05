@@ -73,6 +73,34 @@ public class RoomController {
     }
 
     /**
+     * API tham gia phòng trực tiếp bằng ID
+     *
+     * @param roomId    ID của phòng
+     * @param guestName Tên khách (nếu không đăng nhập)
+     * @param principal Thông tin người dùng hiện tại (có thể null)
+     * @return Thông tin phòng
+     */
+    @PostMapping("/join/{roomId}")
+    @ResponseStatus(HttpStatus.OK)
+    public ApiResponse<RoomResponse> joinRoomById(
+            @PathVariable Long roomId,
+            @RequestParam(required = false) String guestName,
+            Principal principal
+    ) {
+        // Lấy user ID nếu người dùng đã đăng nhập
+        Long userId = null;
+        if (principal != null) {
+            User currentUser = (User) ((Authentication) principal).getPrincipal();
+            userId = currentUser.getId();
+        }
+
+        // Tham gia phòng theo ID
+        RoomResponse room = roomService.joinRoomById(roomId, userId, guestName);
+
+        return ApiResponse.success(room, "Joined room successfully");
+    }
+
+    /**
      * API lấy thông tin phòng theo mã
      *
      * @param code Mã phòng
@@ -95,6 +123,20 @@ public class RoomController {
     public ApiResponse<List<RoomResponse>> getWaitingRooms() {
         List<RoomResponse> rooms = roomService.getRoomsByStatus(Room.Status.waiting);
         return ApiResponse.success(rooms, "Waiting rooms retrieved successfully");
+    }
+
+    /**
+     * API lấy danh sách phòng đang chờ
+     *
+     * @return Danh sách phòng
+     */
+    @GetMapping("/available")
+    @ResponseStatus(HttpStatus.OK)
+    public ApiResponse<List<RoomResponse>> getAvailableRooms(
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) String search) {
+        List<RoomResponse> rooms = roomService.getAvailableRooms(categoryId, search);
+        return ApiResponse.success(rooms, "Available rooms retrieved successfully");
     }
 
     // Thêm các API khác như startRoom, endRoom, leaveRoom, etc.

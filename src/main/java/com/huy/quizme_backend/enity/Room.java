@@ -54,6 +54,7 @@ public class Room {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
+    @Builder.Default
     @OneToMany(mappedBy = "room", cascade = CascadeType.ALL)
     private List<RoomParticipant> participants = new ArrayList<>();
 }

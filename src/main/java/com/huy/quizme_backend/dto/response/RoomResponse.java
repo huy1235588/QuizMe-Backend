@@ -2,10 +2,7 @@ package com.huy.quizme_backend.dto.response;
 
 import com.huy.quizme_backend.enity.Room;
 import com.huy.quizme_backend.service.LocalStorageService;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -15,12 +12,14 @@ import java.util.stream.Collectors;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Setter
 public class RoomResponse {
     private Long id;
     private String name;
     private String code;
     private QuizResponse quiz;
     private UserResponse host;
+    private int currentPlayerCount;
     private int maxPlayers;
     private String status;
     private LocalDateTime startTime;
@@ -41,7 +40,7 @@ public class RoomResponse {
                 .endTime(room.getEndTime())
                 .createdAt(room.getCreatedAt())
                 .participants(room.getParticipants().stream()
-                        .map(ParticipantResponse::fromRoomParticipant)
+                        .map(participant -> ParticipantResponse.fromRoomParticipant(participant, localStorageService))
                         .collect(Collectors.toList()))
                 .build();
     }

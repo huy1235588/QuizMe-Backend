@@ -1,6 +1,7 @@
 package com.huy.quizme_backend.dto.response;
 
 import com.huy.quizme_backend.enity.RoomParticipant;
+import com.huy.quizme_backend.service.LocalStorageService;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,11 +22,11 @@ public class ParticipantResponse {
     private boolean isGuest;
     private String guestName;
 
-    public static ParticipantResponse fromRoomParticipant(RoomParticipant participant) {
+    public static ParticipantResponse fromRoomParticipant(RoomParticipant participant, LocalStorageService localStorageService) {
         return ParticipantResponse.builder()
                 .id(participant.getId())
                 .user(participant.getUser() != null ?
-                        UserResponse.fromUser(participant.getUser(), null) : null)
+                        UserResponse.fromUser(participant.getUser(), localStorageService) : null)
                 .score(participant.getScore())
                 .isHost(participant.isHost())
                 .joinedAt(participant.getJoinedAt())

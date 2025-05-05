@@ -96,7 +96,13 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         // Cấu hình các endpoint được phép truy cập
-                        .requestMatchers("/api/auth/**", "/api/categories/**", "/api/quizzes/**", "/api/questions/**", "/api/users/**").permitAll()
+                        .requestMatchers(
+                                "/api/auth/**",
+                                "/api/categories/**",
+                                "/api/quizzes/**",
+                                "/api/questions/**",
+                                "/api/rooms/**",
+                                "/api/users/**").permitAll()
                         // Thêm các endpoint public khác nếu có
                         .requestMatchers("/uploads/**").permitAll() // Cho phép truy cập vào endpoint upload
 

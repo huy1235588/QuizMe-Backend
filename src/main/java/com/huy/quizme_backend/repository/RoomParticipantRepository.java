@@ -14,4 +14,5 @@ public interface RoomParticipantRepository extends JpaRepository<RoomParticipant
     List<RoomParticipant> findByRoom(Room room);
     Optional<RoomParticipant> findByRoomAndUser(Room room, User user);
     Optional<RoomParticipant> findByRoomAndGuestName(Room room, String guestName);
+    int countByRoom(Room room);
 }

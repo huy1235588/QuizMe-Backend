@@ -171,6 +171,78 @@ public class RoomService {
     }
 
     /**
+     * Tham gia phòng theo ID
+     *
+     * @param roomId    ID của phòng
+     * @param userId    ID của người dùng (có thể null nếu là khách)
+     * @param guestName Tên khách (bắt buộc nếu userId là null)
+     * @return Thông tin phòng
+     */
+    @Transactional
+    public RoomResponse joinRoomById(Long roomId, Long userId, String guestName) {
+        // Tìm phòng theo ID
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Room not found with id: " + roomId));
+
+        // Kiểm tra xem phòng còn chỗ không
+        if (participantRepository.countByRoom(room) >= room.getMaxPlayers()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Room is full");
+        }
+
+        // Kiểm tra trạng thái phòng
+        if (room.getStatus() != Room.Status.waiting) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Room is not accepting new participants");
+        }
+
+        // Tạo participant dựa trên user hoặc guest
+        RoomParticipant participant;
+
+        if (userId != null) {
+            // Người dùng đã đăng nhập
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND, "User not found with id: " + userId));
+
+            // Kiểm tra xem người dùng đã tham gia phòng này chưa
+            if (participantRepository.findByRoomAndUser(room, user).isPresent()) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "User already joined this room");
+            }
+
+            participant = RoomParticipant.builder()
+                    .room(room)
+                    .user(user)
+                    .isHost(false)
+                    .build();
+        } else {
+            // Người dùng là khách
+            if (guestName == null || guestName.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Guest name is required");
+            }
+
+            // Kiểm tra xem tên khách đã được sử dụng trong phòng này chưa
+            if (participantRepository.findByRoomAndGuestName(room, guestName).isPresent()) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Guest name already used in this room");
+            }
+
+            participant = RoomParticipant.builder()
+                    .room(room)
+                    .isGuest(true)
+                    .guestName(guestName)
+                    .isHost(false)
+                    .build();
+        }
+
+        // Lưu participant
+        participantRepository.save(participant);
+
+        // Tải lại thông tin phòng để đảm bảo dữ liệu mới nhất
+        Room updatedRoom = roomRepository.findById(room.getId()).orElseThrow();
+
+        return RoomResponse.fromRoom(updatedRoom, localStorageService);
+    }
+
+    /**
      * Lấy thông tin phòng theo mã
      *
      * @param roomCode Mã phòng
@@ -195,6 +267,47 @@ public class RoomService {
 
         return rooms.stream()
                 .map(room -> RoomResponse.fromRoom(room, localStorageService))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Lấy danh sách phòng có thể tham gia
+     *
+     * @param categoryId ID của danh mục (có thể null)
+     * @param search     Từ khóa tìm kiếm (có thể null)
+     * @return Danh sách phòng
+     */
+    public List<RoomResponse> getAvailableRooms(Long categoryId, String search) {
+        // Chỉ lấy phòng đang chờ
+        List<Room> rooms = roomRepository.findByStatus(Room.Status.waiting);
+
+        // Lọc theo danh mục nếu có
+        if (categoryId != null) {
+            rooms = rooms.stream()
+                    .filter(room -> room.getQuiz().getCategories().stream()
+                            .anyMatch(category -> category.getId().equals(categoryId)))
+                    .collect(Collectors.toList());
+        }
+
+        // Lọc theo tìm kiếm nếu có
+        if (search != null && !search.isEmpty()) {
+            String searchLower = search.toLowerCase();
+            rooms = rooms.stream()
+                    .filter(room ->
+                            (room.getName() != null && room.getName().toLowerCase().contains(searchLower)) ||
+                                    room.getQuiz().getTitle().toLowerCase().contains(searchLower) ||
+                                    room.getHost().getUsername().toLowerCase().contains(searchLower))
+                    .collect(Collectors.toList());
+        }
+
+        // Chuyển đổi sang RoomResponse
+        return rooms.stream()
+                .map(room -> {
+                    RoomResponse response = RoomResponse.fromRoom(room, localStorageService);
+                    // Thêm số người chơi hiện tại
+                    response.setCurrentPlayerCount(participantRepository.countByRoom(room));
+                    return response;
+                })
                 .collect(Collectors.toList());
     }
 

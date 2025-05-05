@@ -39,3 +39,4 @@ src/main/resources/application.yml
 .env
 .env.*
 /uploads
+/src/main/resources/sql/quizme_db.sql

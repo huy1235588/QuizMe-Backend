@@ -430,5 +430,52 @@ public class RoomService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Cập nhật thông tin phòng
+     *
+     * @param roomId      ID của phòng
+     * @param userId      ID của người dùng (phải là host)
+     * @param roomRequest Thông tin cập nhật
+     * @return Thông tin phòng đã cập nhật
+     */
+    @Transactional
+    public RoomResponse updateRoom(Long roomId, Long userId, RoomRequest roomRequest) {
+        // Tìm phòng theo ID
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Room not found with id: " + roomId));
+
+        // Kiểm tra xem người dùng có phải là host không
+        if (!room.getHost().getId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only host can update room settings");
+        }
+
+        // Kiểm tra trạng thái phòng
+        if (room.getStatus() != Room.Status.waiting) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Cannot update room settings when game is not in waiting state");
+        }
+
+        // Cập nhật thông tin phòng
+        room.setName(roomRequest.getName());
+        room.setQuiz(quizRepository.getReferenceById(roomRequest.getQuizId()));
+        room.setPassword(roomRequest.getPassword());
+        room.setIsPublic(roomRequest.getIsPublic());
+
+        // Kiểm tra số người tham gia trước khi cập nhật maxPlayers
+        int currentPlayerCount = participantRepository.countByRoom(room);
+        if (roomRequest.getMaxPlayers() < currentPlayerCount) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Cannot set max players less than current player count");
+        }
+        room.setMaxPlayers(roomRequest.getMaxPlayers());
+
+        // Lưu phòng vào database
+        Room updatedRoom = roomRepository.save(room);
+
+        // Trả về thông tin phòng đã cập nhật
+        return RoomResponse.fromRoom(updatedRoom, localStorageService);
+    }
+
     // Thêm các phương thức khác như startRoom, endRoom, leaveRoom, etc.
 }

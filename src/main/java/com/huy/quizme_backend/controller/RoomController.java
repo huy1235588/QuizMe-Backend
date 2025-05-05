@@ -195,5 +195,32 @@ public class RoomController {
         return ApiResponse.success(rooms, "Available rooms retrieved successfully");
     }
 
+    /**
+     * API cập nhật thông tin phòng (chỉ host mới có quyền)
+     *
+     * @param roomId      ID của phòng
+     * @param roomRequest Thông tin cập nhật
+     * @param principal   Thông tin người dùng hiện tại
+     * @return Thông tin phòng đã cập nhật
+     */
+    @PatchMapping("/{roomId}")
+    @ResponseStatus(HttpStatus.OK)
+    public ApiResponse<RoomResponse> updateRoom(
+            @PathVariable Long roomId,
+            @RequestBody RoomRequest roomRequest,
+            Principal principal
+    ) {
+        // Chỉ user đã đăng nhập mới có thể cập nhật phòng
+        if (principal == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
+        }
+
+        User currentUser = (User) ((Authentication) principal).getPrincipal();
+        Long userId = currentUser.getId();
+
+        RoomResponse room = roomService.updateRoom(roomId, userId, roomRequest);
+        return ApiResponse.success(room, "Room updated successfully");
+    }
+
     // Thêm các API khác như startRoom, endRoom, leaveRoom, etc.
 }

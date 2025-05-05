@@ -243,6 +243,97 @@ public class RoomService {
     }
 
     /**
+     * Rời phòng
+     *
+     * @param roomId    ID của phòng
+     * @param userId    ID của người dùng (có thể null nếu là khách)
+     * @param guestName Tên khách (bắt buộc nếu userId là null)
+     * @return Thông báo thành công
+     */
+    @Transactional
+    public String leaveRoom(Long roomId, Long userId, String guestName) {
+        // Tìm phòng
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Room not found with id: " + roomId));
+
+        RoomParticipant participant;
+
+        if (userId != null) {
+            // Người dùng đã đăng nhập
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND, "User not found with id: " + userId));
+
+            participant = participantRepository.findByRoomAndUser(room, user)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND, "User is not in this room"));
+
+            // Người dùng không thể rời phòng nếu họ là host
+            if (participant.isHost()) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Host cannot leave the room. Close the room instead.");
+            }
+        } else {
+            // Người dùng là khách
+            if (guestName == null || guestName.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Guest name is required");
+            }
+
+            participant = participantRepository.findByRoomAndGuestName(room, guestName)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND, "Guest is not in this room"));
+        }
+
+        // Xóa participant khỏi phòng
+        participantRepository.delete(participant);
+
+        return "Left room successfully";
+    }
+
+    /**
+     * Đóng phòng (chỉ host mới có quyền)
+     *
+     * @param roomId ID của phòng
+     * @param userId ID của người dùng (phải là host)
+     * @return Thông tin phòng đã đóng
+     */
+    @Transactional
+    public RoomResponse closeRoom(Long roomId, Long userId) {
+        // Tìm phòng
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Room not found with id: " + roomId));
+
+        // Tìm người dùng
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "User not found with id: " + userId));
+
+        // Kiểm tra xem người dùng có phải là host không
+        RoomParticipant hostParticipant = participantRepository.findByRoomAndUser(room, user)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "User is not in this room"));
+
+        if (!hostParticipant.isHost()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Only host can close the room");
+        }
+
+        // Kiểm tra trạng thái phòng
+        if (room.getStatus() != Room.Status.waiting) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Can only close rooms in waiting status");
+        }
+
+        // Đổi trạng thái phòng thành cancelled
+        room.setStatus(Room.Status.cancelled);
+        room = roomRepository.save(room);
+
+        return RoomResponse.fromRoom(room, localStorageService);
+    }
+
+    /**
      * Lấy thông tin phòng theo mã
      *
      * @param roomCode Mã phòng

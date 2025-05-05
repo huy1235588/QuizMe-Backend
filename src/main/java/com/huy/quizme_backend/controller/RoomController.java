@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.security.Principal;
 import java.util.List;
@@ -98,6 +99,57 @@ public class RoomController {
         RoomResponse room = roomService.joinRoomById(roomId, userId, guestName);
 
         return ApiResponse.success(room, "Joined room successfully");
+    }
+
+    /**
+     * API rời phòng
+     *
+     * @param roomId ID của phòng
+     * @param guestName Tên khách (nếu là khách)
+     * @param principal Thông tin người dùng hiện tại (có thể null)
+     * @return Thông báo thành công
+     */
+    @DeleteMapping("/leave/{roomId}")
+    @ResponseStatus(HttpStatus.OK)
+    public ApiResponse<String> leaveRoom(
+            @PathVariable Long roomId,
+            @RequestParam(required = false) String guestName,
+            Principal principal
+    ) {
+        // Lấy user ID nếu người dùng đã đăng nhập
+        Long userId = null;
+        if (principal != null) {
+            User currentUser = (User) ((Authentication) principal).getPrincipal();
+            userId = currentUser.getId();
+        }
+
+        String result = roomService.leaveRoom(roomId, userId, guestName);
+        return ApiResponse.success(result, "Left room successfully");
+    }
+
+    /**
+     * API đóng phòng (chỉ host mới có quyền)
+     *
+     * @param roomId ID của phòng
+     * @param principal Thông tin người dùng hiện tại
+     * @return Thông tin phòng đã đóng
+     */
+    @PatchMapping("/close/{roomId}")
+    @ResponseStatus(HttpStatus.OK)
+    public ApiResponse<RoomResponse> closeRoom(
+            @PathVariable Long roomId,
+            Principal principal
+    ) {
+        // Chỉ user đã đăng nhập mới có thể đóng phòng
+        if (principal == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
+        }
+
+        User currentUser = (User) ((Authentication) principal).getPrincipal();
+        Long userId = currentUser.getId();
+
+        RoomResponse room = roomService.closeRoom(roomId, userId);
+        return ApiResponse.success(room, "Room closed successfully");
     }
 
     /**

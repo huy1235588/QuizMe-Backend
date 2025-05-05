@@ -30,6 +30,7 @@ public class QuizResponse {
     private Boolean isPublic;
     private Integer playCount;
     private Integer questionCount;
+    private Integer favoriteCount;
     private String createdAt;
     private String updatedAt;
 
@@ -53,6 +54,7 @@ public class QuizResponse {
                 .isPublic(quiz.getIsPublic())
                 .playCount(quiz.getPlayCount())
                 .questionCount(quiz.getQuestionCount())
+                .favoriteCount(quiz.getFavoriteCount())
                 .createdAt(quiz.getCreatedAt().toString())
                 .updatedAt(quiz.getUpdatedAt() != null ? quiz.getUpdatedAt().toString() : null)
                 .build();

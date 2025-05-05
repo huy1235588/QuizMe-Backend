@@ -186,6 +186,7 @@ public class QuizService {
                 .isPublic(quizRequest.getIsPublic())
                 .playCount(0)
                 .questionCount(0)
+                .favoriteCount(0)
                 .build();
 
         // Lưu vào database và lấy ID

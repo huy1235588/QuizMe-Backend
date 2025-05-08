@@ -1,6 +1,8 @@
 package com.huy.quizme_backend.service;
 
+import com.huy.quizme_backend.dto.response.UserProfileResponse;
 import com.huy.quizme_backend.dto.response.UserResponse;
+import com.huy.quizme_backend.enity.User;
 import com.huy.quizme_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -48,5 +50,43 @@ public class UserService {
      */
     public long countUsers() {
         return userRepository.count();
+    }
+
+    /**
+     * Lấy thông tin profile của người dùng theo ID
+     *
+     * @param userId ID của người dùng
+     * @return Thông tin profile của người dùng
+     */
+    public UserProfileResponse getUserProfile(Long userId) {
+        return userRepository.findById(userId)
+                .map(user -> {
+                    if (user.getUserProfile() == null) {
+                        throw new ResponseStatusException(
+                                HttpStatus.NOT_FOUND, "User profile not found for user with id: " + userId);
+                    }
+                    return UserProfileResponse.fromUserProfile(user.getUserProfile(), localStorageService);
+                })
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "User not found with id: " + userId));
+    }
+    
+    /**
+     * Lấy thông tin profile của người dùng hiện tại
+     *
+     * @param user Thông tin người dùng hiện tại đã đăng nhập
+     * @return Thông tin profile của người dùng
+     */
+    public UserProfileResponse getCurrentUserProfile(User user) {
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is not authenticated");
+        }
+        
+        if (user.getUserProfile() == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "User profile not found for current user");
+        }
+        
+        return UserProfileResponse.fromUserProfile(user.getUserProfile(), localStorageService);
     }
 }

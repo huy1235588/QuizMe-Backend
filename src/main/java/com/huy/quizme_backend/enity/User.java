@@ -62,6 +62,9 @@ public class User implements UserDetails {
     @Column(name = "is_active", nullable = false)
     private boolean isActive = true; // Mặc định là true
 
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private UserProfile userProfile;
+
     // --- UserDetails methods ---
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

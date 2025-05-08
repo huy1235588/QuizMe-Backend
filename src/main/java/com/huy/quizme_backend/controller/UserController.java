@@ -1,16 +1,21 @@
 package com.huy.quizme_backend.controller;
 
 import com.huy.quizme_backend.dto.response.ApiResponse;
+import com.huy.quizme_backend.dto.response.UserProfileResponse;
 import com.huy.quizme_backend.dto.response.UserResponse;
+import com.huy.quizme_backend.enity.User;
 import com.huy.quizme_backend.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.security.Principal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -55,5 +60,35 @@ public class UserController {
         Map<String, Long> response = new HashMap<>();
         response.put("count", count);
         return ApiResponse.success(response, "User count retrieved successfully");
+    }
+
+    /**
+     * API lấy thông tin profile của người dùng hiện tại đã đăng nhập
+     * @param principal Thông tin người dùng đăng nhập hiện tại
+     * @return Thông tin profile người dùng
+     */
+    @GetMapping("/profile")
+    @ResponseStatus(HttpStatus.OK)
+    public ApiResponse<UserProfileResponse> getCurrentUserProfile(Principal principal) {
+        if (principal == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
+        }
+        
+        User currentUser = (User) ((Authentication) principal).getPrincipal();
+        UserProfileResponse profile = userService.getCurrentUserProfile(currentUser);
+        
+        return ApiResponse.success(profile, "User profile retrieved successfully");
+    }
+    
+    /**
+     * API lấy thông tin profile của người dùng theo ID
+     * @param id ID của người dùng
+     * @return Thông tin profile người dùng
+     */
+    @GetMapping("/profile/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    public ApiResponse<UserProfileResponse> getUserProfileById(@PathVariable Long id) {
+        UserProfileResponse profile = userService.getUserProfile(id);
+        return ApiResponse.success(profile, "User profile retrieved successfully");
     }
 }

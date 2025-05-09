@@ -342,6 +342,23 @@ CREATE TABLE IF NOT EXISTS room_participant
     INDEX idx_user_id (user_id)
 );
 
+-- Bảng room_chat
+CREATE TABLE IF NOT EXISTS room_chat
+(
+    id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+    room_id    BIGINT NOT NULL,
+    user_id    BIGINT,      -- NULL nếu được gửi bởi khách
+    is_guest   BOOLEAN   DEFAULT FALSE,
+    guest_name VARCHAR(50), -- NULL nếu được gửi bởi người dùng đã đăng ký
+    message    TEXT   NOT NULL,
+    sent_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (room_id) REFERENCES room (id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE SET NULL,
+    INDEX idx_room_id (room_id),
+    INDEX idx_user_id (user_id),
+    INDEX idx_sent_at (sent_at)
+);
 
 -- *****************************************************************************
 -- III. CHÈN DỮ LIỆU MẪU

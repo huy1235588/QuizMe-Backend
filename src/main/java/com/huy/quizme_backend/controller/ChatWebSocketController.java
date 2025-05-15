@@ -30,7 +30,7 @@ public class ChatWebSocketController {
      *
      * @param roomId ID của phòng
      * @param chatRequest Yêu cầu tin nhắn chat
-     * @param headerAccessor Trình truy cập header để lấy thông tin người dùng
+     * @param principal Thông tin người dùng hiện tại
      * @return Phản hồi tin nhắn chat (sẽ được phát qua WebSocketService)
      */
     @MessageMapping("/chat/{roomId}")

@@ -29,6 +29,7 @@ public class RoomService {
     private final UserRepository userRepository;
     private final QuizRepository quizRepository;
     private final LocalStorageService localStorageService;
+    private final WebSocketService webSocketService;
 
     /**
      * Tạo mã phòng ngẫu nhiên
@@ -174,10 +175,16 @@ public class RoomService {
         }
 
         // Lưu participant
-        participantRepository.save(participant);
+        RoomParticipant savedParticipant = participantRepository.save(participant);
 
         // Tải lại thông tin phòng để đảm bảo dữ liệu mới nhất
         Room updatedRoom = roomRepository.findById(room.getId()).orElseThrow();
+        
+        // Thông báo cho người khác trong phòng về việc người chơi mới tham gia
+        String playerName = savedParticipant.isGuest() 
+                ? savedParticipant.getGuestName() 
+                : savedParticipant.getUser().getUsername();
+        webSocketService.sendPlayerJoinEvent(room.getId(), "Player " + playerName + " joined the room");
 
         return RoomResponse.fromRoom(updatedRoom, localStorageService);
     }
@@ -262,10 +269,16 @@ public class RoomService {
         }
 
         // Lưu participant
-        participantRepository.save(participant);
+        RoomParticipant savedParticipant = participantRepository.save(participant);
 
         // Tải lại thông tin phòng để đảm bảo dữ liệu mới nhất
         Room updatedRoom = roomRepository.findById(room.getId()).orElseThrow();
+
+        // Thông báo cho người khác trong phòng về việc người chơi mới tham gia
+        String playerName = savedParticipant.isGuest() 
+                ? savedParticipant.getGuestName() 
+                : savedParticipant.getUser().getUsername();
+        webSocketService.sendPlayerJoinEvent(room.getId(), "Player " + playerName + " joined the room");
 
         return RoomResponse.fromRoom(updatedRoom, localStorageService);
     }
@@ -286,6 +299,7 @@ public class RoomService {
                         HttpStatus.NOT_FOUND, "Room not found with id: " + roomId));
 
         RoomParticipant participant;
+        String playerName = "";
 
         if (userId != null) {
             // Người dùng đã đăng nhập
@@ -302,6 +316,8 @@ public class RoomService {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                         "Host cannot leave the room. Close the room instead.");
             }
+            
+            playerName = user.getUsername();
         } else {
             // Người dùng là khách
             if (guestName == null || guestName.isEmpty()) {
@@ -311,10 +327,15 @@ public class RoomService {
             participant = participantRepository.findByRoomAndGuestName(room, guestName)
                     .orElseThrow(() -> new ResponseStatusException(
                             HttpStatus.NOT_FOUND, "Guest is not in this room"));
+                            
+            playerName = guestName;
         }
 
         // Xóa participant khỏi phòng
         participantRepository.delete(participant);
+        
+        // Thông báo cho người khác trong phòng về việc người chơi rời đi
+        webSocketService.sendPlayerLeaveEvent(room.getId(), "Player " + playerName + " left the room");
 
         return "Left room successfully";
     }
@@ -357,6 +378,9 @@ public class RoomService {
         // Đổi trạng thái phòng thành cancelled
         room.setStatus(Room.Status.cancelled);
         room = roomRepository.save(room);
+        
+        // Thông báo cho tất cả người trong phòng
+        webSocketService.sendRoomEvent(roomId, "close", "Room has been closed by the host");
 
         return RoomResponse.fromRoom(room, localStorageService);
     }
@@ -477,5 +501,37 @@ public class RoomService {
         return RoomResponse.fromRoom(updatedRoom, localStorageService);
     }
 
-    // Thêm các phương thức khác như startRoom, endRoom, leaveRoom, etc.
+    /**
+     * Bắt đầu trò chơi (chỉ host mới có quyền)
+     *
+     * @param roomId ID của phòng
+     * @param userId ID của người dùng (phải là host)
+     * @return Thông tin phòng đã bắt đầu
+     */
+    @Transactional
+    public RoomResponse startGame(Long roomId, Long userId) {
+        // Tìm phòng
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Room not found with id: " + roomId));
+
+        // Kiểm tra xem người dùng có phải là host không
+        if (!room.getHost().getId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only host can start the game");
+        }
+
+        // Kiểm tra trạng thái phòng
+        if (room.getStatus() != Room.Status.waiting) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Game can only be started from waiting state");
+        }        // Đổi trạng thái phòng thành playing
+        room.setStatus(Room.Status.in_progress);
+        room = roomRepository.save(room);
+
+        // Gửi thông báo qua WebSocket
+        webSocketService.sendGameStartEvent(roomId, "Game started");
+
+        // Trả về thông tin phòng đã cập nhật
+        return RoomResponse.fromRoom(room, localStorageService);
+    }
 }

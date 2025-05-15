@@ -10,7 +10,6 @@ import com.huy.quizme_backend.repository.RoomRepository;
 import com.huy.quizme_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -27,7 +26,7 @@ public class ChatService {
     private final RoomRepository roomRepository;
     private final UserRepository userRepository;
     private final LocalStorageService localStorageService;
-    private final SimpMessagingTemplate messagingTemplate;
+    private final WebSocketService webSocketService;
 
     /**
      * Lấy lịch sử trò chuyện của phòng
@@ -43,10 +42,10 @@ public class ChatService {
 
         // Lấy 50 tin nhắn mới nhất (sẽ được hiển thị theo thứ tự ngược trong giao diện người dùng)
         List<RoomChat> chatMessages = roomChatRepository.findTop50ByRoomIdOrderBySentAtDesc(roomId);
-        
+
         // Đảo ngược để hiển thị tin nhắn cũ nhất trước
         Collections.reverse(chatMessages);
-        
+
         return chatMessages.stream()
                 .map(chat -> ChatMessageResponse.fromRoomChat(chat, localStorageService))
                 .collect(Collectors.toList());
@@ -89,13 +88,13 @@ public class ChatService {
 
         // Lưu tin nhắn trò chuyện
         RoomChat savedChat = roomChatRepository.save(chat);
-        
+
         // Tạo phản hồi
         ChatMessageResponse response = ChatMessageResponse.fromRoomChat(savedChat, localStorageService);
-        
-        // Phát tin nhắn đến tất cả người dùng trong phòng
-        messagingTemplate.convertAndSend("/topic/room/" + room.getId() + "/chat", response);
-        
+
+        // Phát tin nhắn đến tất cả người dùng trong phòng thông qua WebSocketService
+        webSocketService.sendChatMessage(room.getId(), response);
+
         return response;
     }
 }

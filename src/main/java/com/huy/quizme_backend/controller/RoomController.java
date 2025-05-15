@@ -222,5 +222,28 @@ public class RoomController {
         return ApiResponse.success(room, "Room updated successfully");
     }
 
-    // Thêm các API khác như startRoom, endRoom, leaveRoom, etc.
+    /**
+     * API bắt đầu trò chơi (chỉ host mới có quyền)
+     *
+     * @param roomId    ID của phòng
+     * @param principal Thông tin người dùng hiện tại
+     * @return Thông tin phòng đã bắt đầu
+     */
+    @PostMapping("/start/{roomId}")
+    @ResponseStatus(HttpStatus.OK)
+    public ApiResponse<RoomResponse> startGame(
+            @PathVariable Long roomId,
+            Principal principal
+    ) {
+        // Chỉ user đã đăng nhập mới có thể bắt đầu trò chơi
+        if (principal == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
+        }
+
+        User currentUser = (User) ((Authentication) principal).getPrincipal();
+        Long userId = currentUser.getId();
+
+        RoomResponse room = roomService.startGame(roomId, userId);
+        return ApiResponse.success(room, "Game started successfully");
+    }
 }

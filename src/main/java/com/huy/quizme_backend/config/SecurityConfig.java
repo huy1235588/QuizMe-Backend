@@ -107,6 +107,9 @@ public class SecurityConfig {
                         // Thêm các endpoint public khác nếu có
                         .requestMatchers("/uploads/**").permitAll() // Cho phép truy cập vào endpoint upload
 
+                        // Thêm endpoint cho WebSocket
+                        .requestMatchers("/ws/**", "/ws-raw/**").permitAll()
+
                         // Cấu hình các endpoint yêu cầu xác thực
                         .anyRequest().authenticated() // Tất cả các request khác đều cần xác thực
                 )

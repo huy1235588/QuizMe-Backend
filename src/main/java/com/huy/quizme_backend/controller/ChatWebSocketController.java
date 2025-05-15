@@ -2,15 +2,22 @@ package com.huy.quizme_backend.controller;
 
 import com.huy.quizme_backend.dto.request.ChatMessageRequest;
 import com.huy.quizme_backend.dto.response.ChatMessageResponse;
+import com.huy.quizme_backend.enity.User;
 import com.huy.quizme_backend.service.ChatService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
 
+/**
+ * Controller xử lý các tin nhắn chat qua WebSocket
+ * Nhận tin nhắn từ client và gửi đến tất cả người dùng trong phòng
+ */
 @Controller
 @RequiredArgsConstructor
 public class ChatWebSocketController {
@@ -19,28 +26,32 @@ public class ChatWebSocketController {
 
     /**
      * Endpoint WebSocket để gửi tin nhắn chat
-     * Client nên gửi đến /app/chat.sendMessage
+     * Client sẽ gửi đến /app/chat/{roomId}
      *
+     * @param roomId ID của phòng
      * @param chatRequest Yêu cầu tin nhắn chat
      * @param headerAccessor Trình truy cập header để lấy thông tin người dùng
-     * @return Phản hồi tin nhắn chat (sẽ được phát qua service)
+     * @return Phản hồi tin nhắn chat (sẽ được phát qua WebSocketService)
      */
-    @MessageMapping("/chat.sendMessage")
+    @MessageMapping("/chat/{roomId}")
     public ChatMessageResponse sendMessage(
+            @DestinationVariable Long roomId,
             @Payload ChatMessageRequest chatRequest,
-            SimpMessageHeaderAccessor headerAccessor
+            Principal principal
     ) {
-        // Lấy principal của người dùng từ phiên WebSocket
-        Principal principal = headerAccessor.getUser();
-        Long userId = null;
+        // Đảm bảo roomId từ URL được sử dụng
+        chatRequest.setRoomId(roomId);
         
-        // Kiểm tra xem người dùng đã được xác thực hay chưa
+        // Lấy userId từ header
+        // Nếu không có người dùng đăng nhập, userId sẽ là null
+        Long userId = null;
         if (principal != null) {
-            // Trích xuất ID người dùng từ principal
-            userId = Long.parseLong(principal.getName());
+            User currentUser = (User) ((Authentication) principal).getPrincipal();
+            userId = currentUser.getId();
         }
 
-        // Xử lý tin nhắn
+        // Xử lý tin nhắn thông qua ChatService
+        // Chat service sẽ lưu tin nhắn và phát qua WebSocketService
         return chatService.sendMessage(chatRequest, userId);
     }
 }

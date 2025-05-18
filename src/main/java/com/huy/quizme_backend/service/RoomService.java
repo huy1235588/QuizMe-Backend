@@ -571,4 +571,102 @@ public class RoomService {
         // Trả về thông tin phòng đã cập nhật
         return RoomResponse.fromRoom(room, localStorageService);
     }
+
+    /**
+     * Xử lý timeout khi người dùng đã đăng nhập mất kết nối
+     *
+     * @param roomId Room ID
+     * @param userId User ID
+     */
+    @Transactional
+    public void handleUserDisconnectTimeout(Long roomId, Long userId) {
+        // Tìm phòng
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Room not found with id: " + roomId));
+
+        // Tìm người dùng
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "User not found with id: " + userId));
+
+        // Tìm thông tin tham gia phòng
+        RoomParticipant participant = participantRepository.findByRoomAndUser(room, user)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "User is not in this room"));
+
+        // Kiểm tra nếu người dùng là host
+        if (participant.isHost()) {
+            // Nếu là host, đóng phòng
+            closeRoomDueToHostDisconnect(room);
+        } else {
+            // Nếu không phải host, chỉ xóa participant
+            handleParticipantTimeout(participant, user.getUsername(), false);
+        }
+    }
+
+    /**
+     * Xử lý timeout khi khách mất kết nối
+     *
+     * @param roomId    Room ID
+     * @param guestName Guest name
+     */
+    @Transactional
+    public void handleGuestDisconnectTimeout(Long roomId, String guestName) {
+        // Tìm phòng
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Room not found with id: " + roomId));
+
+        // Tìm thông tin tham gia phòng
+        RoomParticipant participant = participantRepository.findByRoomAndGuestName(room, guestName)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Guest is not in this room"));
+
+        // Xóa participant (khách không bao giờ là host)
+        handleParticipantTimeout(participant, guestName, true);
+    }
+
+    /**
+     * Xử lý chung khi một người tham gia bị timeout
+     *
+     * @param participant Thông tin tham gia
+     * @param playerName  Tên hiển thị
+     * @param isGuest     Là khách hay đã đăng nhập
+     */
+    private void handleParticipantTimeout(RoomParticipant participant, String playerName, boolean isGuest) {
+        // Xóa participant
+        Long roomId = participant.getRoom().getId();
+        participantRepository.delete(participant);
+
+        // Thông báo cho người khác trong phòng
+        String message = "Player " + playerName + " left the room";
+
+        // Tạo thông tin người chơi
+        UserResponse userResponse = UserResponse.fromUser(
+                participant.getUser(),
+                localStorageService
+        );
+
+        eventResponse = PlayerEventResponse.fromUser(
+                userResponse,
+                message,
+                "leave"
+        );
+
+        // Gửi thông báo cho những người còn lại trong phòng
+        webSocketService.sendPlayerLeaveEvent(roomId, eventResponse);
+    }
+
+    /**
+     * Đóng phòng khi host ngắt kết nối
+     */
+    private void closeRoomDueToHostDisconnect(Room room) {
+        // Đổi trạng thái phòng thành cancelled
+        room.setStatus(Room.Status.cancelled);
+        roomRepository.save(room);
+
+        // Thông báo cho tất cả người trong phòng
+        webSocketService.sendRoomEvent(room.getId(), "close", "Room has been closed because the host was disconnected");
+    }
 }

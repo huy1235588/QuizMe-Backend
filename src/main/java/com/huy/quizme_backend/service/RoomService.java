@@ -9,6 +9,7 @@ import com.huy.quizme_backend.enity.Quiz;
 import com.huy.quizme_backend.enity.Room;
 import com.huy.quizme_backend.enity.RoomParticipant;
 import com.huy.quizme_backend.enity.User;
+import com.huy.quizme_backend.enity.enums.RoomStatus;
 import com.huy.quizme_backend.repository.QuizRepository;
 import com.huy.quizme_backend.repository.RoomParticipantRepository;
 import com.huy.quizme_backend.repository.RoomRepository;
@@ -86,7 +87,7 @@ public class RoomService {
                 .password(roomRequest.getPassword())
                 .isPublic(roomRequest.getIsPublic())
                 .maxPlayers(roomRequest.getMaxPlayers())
-                .status(Room.Status.waiting)
+                .status(RoomStatus.WAITING)
                 .build();
 
         // Lưu phòng vào database
@@ -135,7 +136,7 @@ public class RoomService {
         }
 
         // Kiểm tra trạng thái phòng
-        if (room.getStatus() != Room.Status.waiting) {
+        if (room.getStatus() != RoomStatus.WAITING) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Room is not accepting new participants");
         }
 
@@ -229,7 +230,7 @@ public class RoomService {
         }
 
         // Kiểm tra trạng thái phòng
-        if (room.getStatus() != Room.Status.waiting) {
+        if (room.getStatus() != RoomStatus.WAITING) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Room is not accepting new participants");
         }
 
@@ -407,13 +408,13 @@ public class RoomService {
         }
 
         // Kiểm tra trạng thái phòng
-        if (room.getStatus() != Room.Status.waiting) {
+        if (room.getStatus() != RoomStatus.WAITING) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Can only close rooms in waiting status");
         }
 
         // Đổi trạng thái phòng thành cancelled
-        room.setStatus(Room.Status.cancelled);
+        room.setStatus(RoomStatus.CANCELLED);
         room = roomRepository.save(room);
 
         // Thông báo cho tất cả người trong phòng
@@ -442,7 +443,7 @@ public class RoomService {
      * @param status Trạng thái phòng
      * @return Danh sách phòng
      */
-    public List<RoomResponse> getRoomsByStatus(Room.Status status) {
+    public List<RoomResponse> getRoomsByStatus(RoomStatus status) {
         List<Room> rooms = roomRepository.findByStatus(status);
 
         return rooms.stream()
@@ -459,7 +460,7 @@ public class RoomService {
      */
     public List<RoomResponse> getAvailableRooms(Long categoryId, String search) {
         // Chỉ lấy phòng đang chờ
-        List<Room> rooms = roomRepository.findByStatusAndIsPublic(Room.Status.waiting, true);
+        List<Room> rooms = roomRepository.findByStatusAndIsPublic(RoomStatus.WAITING, true);
 
         // Lọc theo danh mục nếu có
         if (categoryId != null) {
@@ -512,7 +513,7 @@ public class RoomService {
         }
 
         // Kiểm tra trạng thái phòng
-        if (room.getStatus() != Room.Status.waiting) {
+        if (room.getStatus() != RoomStatus.WAITING) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Cannot update room settings when game is not in waiting state");
         }
@@ -558,11 +559,11 @@ public class RoomService {
         }
 
         // Kiểm tra trạng thái phòng
-        if (room.getStatus() != Room.Status.waiting) {
+        if (room.getStatus() != RoomStatus.WAITING) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Game can only be started from waiting state");
         }        // Đổi trạng thái phòng thành playing
-        room.setStatus(Room.Status.in_progress);
+        room.setStatus(RoomStatus.IN_PROGRESS);
         room = roomRepository.save(room);
 
         // Gửi thông báo qua WebSocket
@@ -663,7 +664,7 @@ public class RoomService {
      */
     private void closeRoomDueToHostDisconnect(Room room) {
         // Đổi trạng thái phòng thành cancelled
-        room.setStatus(Room.Status.cancelled);
+        room.setStatus(RoomStatus.CANCELLED);
         roomRepository.save(room);
 
         // Thông báo cho tất cả người trong phòng

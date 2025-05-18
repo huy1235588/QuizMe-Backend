@@ -5,7 +5,7 @@ import com.huy.quizme_backend.dto.request.RegisterRequest;
 import com.huy.quizme_backend.dto.response.AuthResponse;
 import com.huy.quizme_backend.dto.response.UserResponse;
 import com.huy.quizme_backend.enity.RefreshToken;
-import com.huy.quizme_backend.enity.Role;
+import com.huy.quizme_backend.enity.enums.Role;
 import com.huy.quizme_backend.enity.User;
 import com.huy.quizme_backend.repository.RefreshTokenRepository;
 import com.huy.quizme_backend.repository.UserRepository;

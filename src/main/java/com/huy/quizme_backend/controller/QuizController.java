@@ -4,7 +4,7 @@ import com.huy.quizme_backend.dto.request.QuizRequest;
 import com.huy.quizme_backend.dto.response.ApiResponse;
 import com.huy.quizme_backend.dto.response.PageResponse;
 import com.huy.quizme_backend.dto.response.QuizResponse;
-import com.huy.quizme_backend.enity.Difficulty;
+import com.huy.quizme_backend.enity.enums.Difficulty;
 import com.huy.quizme_backend.enity.User;
 import com.huy.quizme_backend.service.QuizService;
 import jakarta.validation.Valid;

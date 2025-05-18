@@ -1,7 +1,7 @@
 package com.huy.quizme_backend.dto.response;
 
 import com.huy.quizme_backend.enity.Category;
-import com.huy.quizme_backend.enity.Difficulty;
+import com.huy.quizme_backend.enity.enums.Difficulty;
 import com.huy.quizme_backend.enity.Quiz;
 import com.huy.quizme_backend.service.LocalStorageService;
 import lombok.AllArgsConstructor;

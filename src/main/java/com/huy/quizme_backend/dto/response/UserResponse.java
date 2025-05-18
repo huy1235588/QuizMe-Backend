@@ -1,6 +1,6 @@
 package com.huy.quizme_backend.dto.response;
 
-import com.huy.quizme_backend.enity.Role;
+import com.huy.quizme_backend.enity.enums.Role;
 import com.huy.quizme_backend.enity.User;
 import com.huy.quizme_backend.service.LocalStorageService;
 import lombok.AllArgsConstructor;

@@ -7,6 +7,7 @@ import com.huy.quizme_backend.dto.response.ApiResponse;
 import com.huy.quizme_backend.dto.response.RoomResponse;
 import com.huy.quizme_backend.enity.Room;
 import com.huy.quizme_backend.enity.User;
+import com.huy.quizme_backend.enity.enums.RoomStatus;
 import com.huy.quizme_backend.service.RoomService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -177,7 +178,7 @@ public class RoomController {
     @GetMapping("/waiting")
     @ResponseStatus(HttpStatus.OK)
     public ApiResponse<List<RoomResponse>> getWaitingRooms() {
-        List<RoomResponse> rooms = roomService.getRoomsByStatus(Room.Status.waiting);
+        List<RoomResponse> rooms = roomService.getRoomsByStatus(RoomStatus.WAITING);
         return ApiResponse.success(rooms, "Waiting rooms retrieved successfully");
     }
 

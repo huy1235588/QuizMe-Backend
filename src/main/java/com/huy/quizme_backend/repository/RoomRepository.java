@@ -2,6 +2,7 @@ package com.huy.quizme_backend.repository;
 
 import com.huy.quizme_backend.enity.Room;
 import com.huy.quizme_backend.enity.User;
+import com.huy.quizme_backend.enity.enums.RoomStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -12,6 +13,6 @@ import java.util.Optional;
 public interface RoomRepository extends JpaRepository<Room, Long> {
     Optional<Room> findByCode(String code);
     List<Room> findByHost(User host);
-    List<Room> findByStatus(Room.Status status);
-    List<Room> findByStatusAndIsPublic(Room.Status status, Boolean isPublic);
+    List<Room> findByStatus(RoomStatus status);
+    List<Room> findByStatusAndIsPublic(RoomStatus status, Boolean isPublic);
 }

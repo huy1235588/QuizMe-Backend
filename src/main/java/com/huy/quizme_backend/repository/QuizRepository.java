@@ -1,6 +1,6 @@
 package com.huy.quizme_backend.repository;
 
-import com.huy.quizme_backend.enity.Difficulty;
+import com.huy.quizme_backend.enity.enums.Difficulty;
 import com.huy.quizme_backend.enity.Quiz;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

@@ -1,6 +1,6 @@
 package com.huy.quizme_backend.dto.request;
 
-import com.huy.quizme_backend.enity.QuestionType;
+import com.huy.quizme_backend.enity.enums.QuestionType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;

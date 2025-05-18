@@ -2,7 +2,9 @@ package com.huy.quizme_backend.service;
 
 import com.huy.quizme_backend.dto.request.JoinRoomRequest;
 import com.huy.quizme_backend.dto.request.RoomRequest;
+import com.huy.quizme_backend.dto.event.PlayerEventResponse;
 import com.huy.quizme_backend.dto.response.RoomResponse;
+import com.huy.quizme_backend.dto.response.UserResponse;
 import com.huy.quizme_backend.enity.Quiz;
 import com.huy.quizme_backend.enity.Room;
 import com.huy.quizme_backend.enity.RoomParticipant;
@@ -30,6 +32,7 @@ public class RoomService {
     private final QuizRepository quizRepository;
     private final LocalStorageService localStorageService;
     private final WebSocketService webSocketService;
+    private PlayerEventResponse eventResponse;
 
     /**
      * Tạo mã phòng ngẫu nhiên
@@ -179,10 +182,10 @@ public class RoomService {
 
         // Tải lại thông tin phòng để đảm bảo dữ liệu mới nhất
         Room updatedRoom = roomRepository.findById(room.getId()).orElseThrow();
-        
+
         // Thông báo cho người khác trong phòng về việc người chơi mới tham gia
-        String playerName = savedParticipant.isGuest() 
-                ? savedParticipant.getGuestName() 
+        String playerName = savedParticipant.isGuest()
+                ? savedParticipant.getGuestName()
                 : savedParticipant.getUser().getUsername();
         webSocketService.sendPlayerJoinEvent(room.getId(), "Player " + playerName + " joined the room");
 
@@ -275,10 +278,28 @@ public class RoomService {
         Room updatedRoom = roomRepository.findById(room.getId()).orElseThrow();
 
         // Thông báo cho người khác trong phòng về việc người chơi mới tham gia
-        String playerName = savedParticipant.isGuest() 
-                ? savedParticipant.getGuestName() 
+        String playerName = savedParticipant.isGuest()
+                ? savedParticipant.getGuestName()
                 : savedParticipant.getUser().getUsername();
-        webSocketService.sendPlayerJoinEvent(room.getId(), "Player " + playerName + " joined the room");
+
+        // Tạo thông báo cho người chơi tham gia
+        String message = "Player " + playerName + " joined the room";
+
+        // Tạo thông tin người chơi
+        UserResponse userResponse = UserResponse.fromUser(
+                savedParticipant.getUser(),
+                localStorageService
+        );
+
+        // Tạo sự kiện người chơi tham gia phòng
+        eventResponse = PlayerEventResponse.fromUser(
+                userResponse,
+                message,
+                "join"
+        );
+
+        // Gửi thông báo cho tất cả người trong phòng
+        webSocketService.sendPlayerJoinEvent(room.getId(), eventResponse);
 
         return RoomResponse.fromRoom(updatedRoom, localStorageService);
     }
@@ -316,7 +337,7 @@ public class RoomService {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                         "Host cannot leave the room. Close the room instead.");
             }
-            
+
             playerName = user.getUsername();
         } else {
             // Người dùng là khách
@@ -327,15 +348,31 @@ public class RoomService {
             participant = participantRepository.findByRoomAndGuestName(room, guestName)
                     .orElseThrow(() -> new ResponseStatusException(
                             HttpStatus.NOT_FOUND, "Guest is not in this room"));
-                            
+
             playerName = guestName;
         }
 
         // Xóa participant khỏi phòng
         participantRepository.delete(participant);
-        
+
         // Thông báo cho người khác trong phòng về việc người chơi rời đi
-        webSocketService.sendPlayerLeaveEvent(room.getId(), "Player " + playerName + " left the room");
+        String message = "Player " + playerName + " left the room";
+
+        // Tạo thông tin người chơi
+        UserResponse userResponse = UserResponse.fromUser(
+                participant.getUser(),
+                localStorageService
+        );
+
+        // Tạo sự kiện người chơi rời phòng
+        eventResponse = PlayerEventResponse.fromUser(
+                userResponse,
+                message,
+                "leave"
+        );
+
+        // Gửi thông báo cho tất cả người trong phòng
+        webSocketService.sendPlayerLeaveEvent(room.getId(), eventResponse);
 
         return "Left room successfully";
     }
@@ -378,7 +415,7 @@ public class RoomService {
         // Đổi trạng thái phòng thành cancelled
         room.setStatus(Room.Status.cancelled);
         room = roomRepository.save(room);
-        
+
         // Thông báo cho tất cả người trong phòng
         webSocketService.sendRoomEvent(roomId, "close", "Room has been closed by the host");
 

@@ -27,13 +27,18 @@ public class RoomParticipant {
 
     private int score = 0;
 
+    @Column(name = "is_host")
     private boolean isHost = false;
 
+    @Column(name = "joined_at")
     private LocalDateTime joinedAt = LocalDateTime.now();
 
+    @Column(name = "left_at")
     private LocalDateTime leftAt;
 
+    @Column(name = "is_guest")
     private boolean isGuest = false;
 
+    @Column(name = "guest_name", length = 50)
     private String guestName;
 }

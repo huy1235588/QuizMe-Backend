@@ -23,11 +23,14 @@ CREATE TABLE IF NOT EXISTS user
     password      VARCHAR(255) NOT NULL,
     full_name     VARCHAR(100) NOT NULL,
     profile_image VARCHAR(255),
-    created_at    TIMESTAMP              DEFAULT CURRENT_TIMESTAMP,
-    updated_at    TIMESTAMP              DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    last_login    TIMESTAMP    NULL      DEFAULT NULL,
-    role          ENUM ('ADMIN', 'USER') DEFAULT 'USER',
-    is_active     BOOLEAN                DEFAULT TRUE,
+    created_at    TIMESTAMP             DEFAULT CURRENT_TIMESTAMP,
+    updated_at    TIMESTAMP             DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    last_login    TIMESTAMP    NULL     DEFAULT NULL,
+    role          ENUM (
+        'USER',
+        'ADMIN'
+        )                      NOT NULL DEFAULT 'USER',
+    is_active     BOOLEAN               DEFAULT TRUE,
 
     INDEX idx_username (username),
     INDEX idx_email (email)
@@ -128,14 +131,18 @@ CREATE TABLE IF NOT EXISTS quiz
     description     VARCHAR(1000),
     quiz_thumbnails VARCHAR(255),
     creator_id      BIGINT       NOT NULL,
-    difficulty      ENUM ('EASY', 'MEDIUM', 'HARD') DEFAULT 'MEDIUM',
-    is_public       BOOLEAN                         DEFAULT TRUE,
-    play_count      INT                             DEFAULT 0,
-    question_count  INT                             DEFAULT 0,
-    favorite_count  INT                             DEFAULT 0,
+    difficulty      ENUM (
+        'EASY',
+        'MEDIUM',
+        'HARD'
+        )                        NOT NULL DEFAULT 'MEDIUM',
+    is_public       BOOLEAN               DEFAULT TRUE,
+    play_count      INT                   DEFAULT 0,
+    question_count  INT                   DEFAULT 0,
+    favorite_count  INT                   DEFAULT 0,
 
-    created_at      TIMESTAMP                       DEFAULT CURRENT_TIMESTAMP,
-    updated_at      TIMESTAMP                       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_at      TIMESTAMP             DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP             DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     FOREIGN KEY (creator_id) REFERENCES user (id) ON DELETE CASCADE,
     INDEX idx_creator_id (creator_id),

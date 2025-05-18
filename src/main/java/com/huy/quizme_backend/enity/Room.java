@@ -1,5 +1,6 @@
 package com.huy.quizme_backend.enity;
 
+import com.huy.quizme_backend.enity.enums.RoomStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -17,18 +18,14 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class Room {
-
-    public enum Status {
-        waiting, in_progress, completed, cancelled
-    }
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(unique = true, nullable = false)
+    @Column(unique = true, nullable = false, length = 10)
     private String code;
 
     @ManyToOne
@@ -42,22 +39,29 @@ public class Room {
     private String password;
 
     @Builder.Default
+    @Column(name = "is_public")
     private Boolean isPublic = true;
 
     @Builder.Default
+    @Column(name = "max_players")
     private int maxPlayers = 10;
 
     @Enumerated(EnumType.STRING)
-    private Status status = Status.waiting;
+    @Column(name = "status")
+    private RoomStatus status = RoomStatus.WAITING;
 
+    @Column(name = "start_time")
     private LocalDateTime startTime;
 
+    @Column(name = "end_time")
     private LocalDateTime endTime;
 
     @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     @Builder.Default

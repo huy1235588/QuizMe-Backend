@@ -1,5 +1,6 @@
 package com.huy.quizme_backend.enity;
 
+import com.huy.quizme_backend.enity.enums.QuestionType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -58,6 +59,7 @@ public class Question {
     private Integer orderNumber;
 
     @Column(name = "type", nullable = false)
+    @Enumerated(EnumType.STRING)
     private QuestionType type = QuestionType.QUIZ;
 
     @CreationTimestamp

@@ -29,10 +29,10 @@ public class RoomChat {
     @Column(name = "is_guest")
     private Boolean isGuest;
 
-    @Column(name = "guest_name")
+    @Column(name = "guest_name", length = 50)
     private String guestName;
 
-    @Column(name = "message", nullable = false)
+    @Column(name = "message", nullable = false, columnDefinition = "TEXT")
     private String message;
 
     @CreationTimestamp

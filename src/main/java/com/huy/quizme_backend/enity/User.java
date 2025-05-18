@@ -1,5 +1,6 @@
 package com.huy.quizme_backend.enity;
 
+import com.huy.quizme_backend.enity.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -56,13 +57,13 @@ public class User implements UserDetails {
     private LocalDateTime lastLogin;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "role", nullable = false, length = 20)
+    @Column(name = "role", nullable = false)
     private Role role = Role.USER; // Mặc định là USER
 
     @Column(name = "is_active", nullable = false)
     private boolean isActive = true; // Mặc định là true
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private UserProfile userProfile;
 
     // --- UserDetails methods ---

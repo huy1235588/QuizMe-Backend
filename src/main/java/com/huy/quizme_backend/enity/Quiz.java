@@ -1,5 +1,6 @@
 package com.huy.quizme_backend.enity;
 
+import com.huy.quizme_backend.enity.enums.Difficulty;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -10,13 +11,13 @@ import java.util.List;
 
 @Entity
 @Table(
-    name = "quiz",
-    indexes = {
-        @Index(name = "idx_creator_id", columnList = "creator_id"),
-        @Index(name = "idx_difficulty", columnList = "difficulty"),
-        @Index(name = "idx_is_public", columnList = "is_public"),
-        @Index(name = "idx_play_count", columnList = "play_count")
-    }
+        name = "quiz",
+        indexes = {
+                @Index(name = "idx_creator_id", columnList = "creator_id"),
+                @Index(name = "idx_difficulty", columnList = "difficulty"),
+                @Index(name = "idx_is_public", columnList = "is_public"),
+                @Index(name = "idx_play_count", columnList = "play_count")
+        }
 )
 @Getter
 @Setter
@@ -42,7 +43,7 @@ public class Quiz {
     private User creator;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 10)
+    @Column(nullable = false)
     private Difficulty difficulty = Difficulty.MEDIUM;
 
     @Column(name = "is_public", nullable = false)
@@ -68,9 +69,9 @@ public class Quiz {
     // Updated relationship to match database schema
     @ManyToMany
     @JoinTable(
-        name = "quiz_category",
-        joinColumns = @JoinColumn(name = "quiz_id"),
-        inverseJoinColumns = @JoinColumn(name = "category_id")
+            name = "quiz_category",
+            joinColumns = @JoinColumn(name = "quiz_id"),
+            inverseJoinColumns = @JoinColumn(name = "category_id")
     )
     private List<Category> categories;
 

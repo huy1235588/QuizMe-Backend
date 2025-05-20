@@ -35,5 +35,5 @@ public class GameResultQuestion {
     private int incorrectCount;
 
     @Column(name = "avg_time")
-    private Float avgTime;
+    private Double avgTime;
 }

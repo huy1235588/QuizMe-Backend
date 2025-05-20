@@ -48,7 +48,7 @@ public class GameResult {
     private int questionCount;
 
     @Column(name = "avg_score")
-    private Float avgScore;
+    private Double avgScore;
 
     @Column(name = "highest_score")
     private Integer highestScore;
@@ -57,7 +57,7 @@ public class GameResult {
     private Integer lowestScore;
 
     @Column(name = "completion_rate")
-    private Float completionRate;
+    private Double completionRate;
 
     @CreationTimestamp
     @Column(name = "created_at")

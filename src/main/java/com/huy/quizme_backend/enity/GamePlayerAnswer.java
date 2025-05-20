@@ -42,7 +42,7 @@ public class GamePlayerAnswer {
     private boolean isCorrect = false;
 
     @Column(name = "answer_time", nullable = false)
-    private Float answerTime;
+    private Double answerTime;
 
     @Column(nullable = false)
     private int score;

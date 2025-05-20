@@ -381,10 +381,10 @@ CREATE TABLE IF NOT EXISTS game_result
     end_time          TIMESTAMP NULL DEFAULT NULL,
     participant_count INT       NOT NULL,
     question_count    INT       NOT NULL,
-    avg_score         FLOAT,
+    avg_score         DOUBLE,
     highest_score     INT,
     lowest_score      INT,
-    completion_rate   FLOAT,
+    completion_rate   DOUBLE,
 
     created_at        TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
 
@@ -403,7 +403,7 @@ CREATE TABLE IF NOT EXISTS game_result_question
     question_id     BIGINT NOT NULL,
     correct_count   INT    NOT NULL,
     incorrect_count INT    NOT NULL,
-    avg_time        FLOAT,
+    avg_time        DOUBLE,
 
     FOREIGN KEY (game_result_id) REFERENCES game_result (id) ON DELETE CASCADE,
     FOREIGN KEY (question_id) REFERENCES question (id) ON DELETE CASCADE,
@@ -418,7 +418,7 @@ CREATE TABLE IF NOT EXISTS game_player_answer
     participant_id BIGINT NOT NULL,
     question_id    BIGINT NOT NULL,
     is_correct     BOOLEAN   DEFAULT FALSE,
-    answer_time    FLOAT  NOT NULL,
+    answer_time    DOUBLE NOT NULL,
     score          INT    NOT NULL,
 
     created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

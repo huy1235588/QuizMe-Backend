@@ -367,6 +367,84 @@ CREATE TABLE IF NOT EXISTS room_chat
     INDEX idx_sent_at (sent_at)
 );
 
+/*
+ Các bảng cho chức năng nhiều người chơi
+*/
+
+-- Bảng game_result
+CREATE TABLE IF NOT EXISTS game_result
+(
+    id                BIGINT AUTO_INCREMENT PRIMARY KEY,
+    room_id           BIGINT    NOT NULL,
+    quiz_id           BIGINT    NOT NULL,
+    start_time        TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
+    end_time          TIMESTAMP NULL DEFAULT NULL,
+    participant_count INT       NOT NULL,
+    question_count    INT       NOT NULL,
+    avg_score         FLOAT,
+    highest_score     INT,
+    lowest_score      INT,
+    completion_rate   FLOAT,
+
+    created_at        TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (room_id) REFERENCES room (id) ON DELETE CASCADE,
+    FOREIGN KEY (quiz_id) REFERENCES quiz (id) ON DELETE CASCADE,
+    INDEX idx_room_id (room_id),
+    INDEX idx_quiz_id (quiz_id),
+    INDEX idx_start_time (start_time)
+);
+
+-- Bảng game_result_question
+CREATE TABLE IF NOT EXISTS game_result_question
+(
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    game_result_id  BIGINT NOT NULL,
+    question_id     BIGINT NOT NULL,
+    correct_count   INT    NOT NULL,
+    incorrect_count INT    NOT NULL,
+    avg_time        FLOAT,
+
+    FOREIGN KEY (game_result_id) REFERENCES game_result (id) ON DELETE CASCADE,
+    FOREIGN KEY (question_id) REFERENCES question (id) ON DELETE CASCADE,
+    INDEX idx_game_result_id (game_result_id)
+);
+
+-- Bảng game_player_answer
+CREATE TABLE IF NOT EXISTS game_player_answer
+(
+    id             BIGINT AUTO_INCREMENT PRIMARY KEY,
+    game_result_id BIGINT NOT NULL,
+    participant_id BIGINT NOT NULL,
+    question_id    BIGINT NOT NULL,
+    is_correct     BOOLEAN   DEFAULT FALSE,
+    answer_time    FLOAT  NOT NULL,
+    score          INT    NOT NULL,
+
+    created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (game_result_id) REFERENCES game_result (id) ON DELETE CASCADE,
+    FOREIGN KEY (participant_id) REFERENCES room_participant (id) ON DELETE CASCADE,
+    FOREIGN KEY (question_id) REFERENCES question (id) ON DELETE CASCADE,
+
+    INDEX idx_game_result_participant (game_result_id, participant_id),
+    INDEX idx_participant_question (participant_id, question_id)
+);
+
+-- Bảng game_player_answer_option
+CREATE TABLE IF NOT EXISTS game_player_answer_option
+(
+    id                    BIGINT AUTO_INCREMENT PRIMARY KEY,
+    game_player_answer_id BIGINT NOT NULL,
+    option_id             BIGINT NOT NULL,
+
+    FOREIGN KEY (game_player_answer_id) REFERENCES game_player_answer (id) ON DELETE CASCADE,
+    FOREIGN KEY (option_id) REFERENCES question_option (id) ON DELETE CASCADE,
+
+    UNIQUE KEY unique_player_answer_option (game_player_answer_id, option_id),
+    INDEX idx_game_player_answer_id (game_player_answer_id)
+);
+
 -- *****************************************************************************
 -- III. CHÈN DỮ LIỆU MẪU
 -- *****************************************************************************

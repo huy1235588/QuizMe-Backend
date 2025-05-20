@@ -166,6 +166,18 @@ public class WebSocketSessionRegistry {
     }
 
     /**
+     * Lấy sessionId từ userId
+     */
+    public String getSessionIdByUserId(Long userId) {
+        for (Map.Entry<String, SessionInfo> entry : sessions.entrySet()) {
+            if (entry.getValue().userId != null && entry.getValue().userId.equals(userId)) {
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
+
+    /**
      * Lấy guestName từ sessionId
      */
     public String getGuestNameBySessionId(String sessionId) {

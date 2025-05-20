@@ -10,7 +10,10 @@ import java.util.List;
 public interface QuestionOptionRepository extends JpaRepository<QuestionOption, Long> {
     // Find options by question ID
     List<QuestionOption> findByQuestionId(Long questionId);
-    
+
     // Find options by multiple question IDs
     List<QuestionOption> findByQuestionIdIn(List<Long> questionIds);
+
+    // Find correct options for a question
+    List<QuestionOption> findByQuestionIdAndIsCorrect(Long questionId, Boolean isCorrect);
 }

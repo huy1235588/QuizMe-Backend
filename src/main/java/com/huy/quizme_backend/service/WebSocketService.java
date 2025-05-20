@@ -1,5 +1,9 @@
 package com.huy.quizme_backend.service;
 
+import com.huy.quizme_backend.dto.game.GameResultDTO;
+import com.huy.quizme_backend.dto.game.LeaderboardDTO;
+import com.huy.quizme_backend.dto.game.QuestionGameDTO;
+import com.huy.quizme_backend.dto.game.QuestionResultDTO;
 import com.huy.quizme_backend.dto.response.ChatMessageResponse;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -9,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Service chuyên xử lý và quản lý các kênh WebSocket
@@ -19,7 +25,7 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class WebSocketService {
     private final SimpMessagingTemplate messagingTemplate;
-    
+
     // Constants cho các topic WebSocket
     public static final String ROOM_TOPIC_PREFIX = "/topic/room/";
     public static final String CHAT_EVENT = "/chat";
@@ -28,9 +34,17 @@ public class WebSocketService {
     public static final String PLAYER_LEAVE_EVENT = "/player-leave";
     public static final String GAME_PROGRESS_EVENT = "/progress";
     public static final String GAME_END_EVENT = "/end";
-    
+
+    // Thêm constants cho các sự kiện chơi quiz
+    public static final String QUESTION_EVENT = "/question";
+    public static final String TIMER_EVENT = "/timer";
+    public static final String QUESTION_RESULT_EVENT = "/question-result";
+    public static final String LEADERBOARD_EVENT = "/leaderboard";
+    public static final String NEXT_QUESTION_EVENT = "/next-question";
+
     /**
      * WebSocket message container chuẩn hóa
+     *
      * @param <T> Kiểu dữ liệu của payload
      */
     @Data
@@ -39,13 +53,13 @@ public class WebSocketService {
         private String type;
         private T payload;
         private Instant timestamp = Instant.now();
-        
+
         public WebSocketMessage(String type, T payload) {
             this.type = type;
             this.payload = payload;
         }
     }
-    
+
     /**
      * Tạo đường dẫn destination cho một phòng và sự kiện
      */
@@ -53,7 +67,7 @@ public class WebSocketService {
         Assert.notNull(roomId, "Room ID không được để trống");
         return ROOM_TOPIC_PREFIX + roomId + eventType;
     }
-    
+
     /**
      * Gửi message có cấu trúc chuẩn đến destination
      */
@@ -62,7 +76,7 @@ public class WebSocketService {
         WebSocketMessage<T> message = new WebSocketMessage<>(eventType, payload);
         messagingTemplate.convertAndSend(destination, message);
     }
-    
+
     /**
      * Gửi tin nhắn trò chuyện đến một phòng cụ thể
      */
@@ -70,7 +84,7 @@ public class WebSocketService {
         String destination = buildDestination(roomId, CHAT_EVENT);
         sendMessage(destination, "CHAT", message);
     }
-    
+
     /**
      * Gửi sự kiện bắt đầu trò chơi đến một phòng cụ thể
      */
@@ -78,7 +92,7 @@ public class WebSocketService {
         String destination = buildDestination(roomId, GAME_START_EVENT);
         sendMessage(destination, "GAME_START", payload);
     }
-    
+
     /**
      * Gửi sự kiện người chơi tham gia phòng
      */
@@ -86,7 +100,7 @@ public class WebSocketService {
         String destination = buildDestination(roomId, PLAYER_JOIN_EVENT);
         sendMessage(destination, "PLAYER_JOIN", payload);
     }
-    
+
     /**
      * Gửi sự kiện người chơi rời phòng
      */
@@ -94,7 +108,7 @@ public class WebSocketService {
         String destination = buildDestination(roomId, PLAYER_LEAVE_EVENT);
         sendMessage(destination, "PLAYER_LEAVE", payload);
     }
-    
+
     /**
      * Gửi sự kiện cập nhật tiến trình trò chơi
      */
@@ -102,7 +116,7 @@ public class WebSocketService {
         String destination = buildDestination(roomId, GAME_PROGRESS_EVENT);
         sendMessage(destination, "GAME_PROGRESS", payload);
     }
-    
+
     /**
      * Gửi sự kiện kết thúc trò chơi
      */
@@ -110,7 +124,7 @@ public class WebSocketService {
         String destination = buildDestination(roomId, GAME_END_EVENT);
         sendMessage(destination, "GAME_END", payload);
     }
-    
+
     /**
      * Gửi sự kiện tùy chỉnh đến một phòng cụ thể
      */
@@ -119,5 +133,96 @@ public class WebSocketService {
         String destination = buildDestination(roomId, formattedEventType);
         String eventName = eventType.replaceAll("/", "").toUpperCase();
         sendMessage(destination, eventName, payload);
+    }
+
+    /**
+     * Gửi câu hỏi tới người chơi trong phòng
+     *
+     * @param roomId      ID phòng
+     * @param questionDTO Dữ liệu câu hỏi
+     */
+    public void sendQuestionEvent(Long roomId, QuestionGameDTO questionDTO) {
+        Assert.notNull(roomId, "RoomId không được null");
+        Assert.notNull(questionDTO, "QuestionGameDTO không được null");
+
+        WebSocketMessage<QuestionGameDTO> message = new WebSocketMessage<>("QUESTION", questionDTO);
+        messagingTemplate.convertAndSend(ROOM_TOPIC_PREFIX + roomId + QUESTION_EVENT, message);
+    }
+
+    /**
+     * Gửi cập nhật thời gian đếm ngược
+     *
+     * @param roomId           ID phòng
+     * @param remainingSeconds Số giây còn lại
+     * @param totalTime        Tổng thời gian
+     */
+    public void sendTimerEvent(Long roomId, int remainingSeconds, int totalTime) {
+        Assert.notNull(roomId, "RoomId không được null");
+
+        Map<String, Integer> timerData = new HashMap<>();
+        timerData.put("seconds", remainingSeconds);
+        timerData.put("totalTime", totalTime);
+
+        WebSocketMessage<Map<String, Integer>> message = new WebSocketMessage<>("TIMER", timerData);
+        messagingTemplate.convertAndSend(ROOM_TOPIC_PREFIX + roomId + TIMER_EVENT, message);
+    }
+
+    /**
+     * Gửi kết quả câu hỏi
+     *
+     * @param roomId    ID phòng
+     * @param resultDTO Dữ liệu kết quả
+     */
+    public void sendQuestionResultEvent(Long roomId, QuestionResultDTO resultDTO) {
+        Assert.notNull(roomId, "RoomId không được null");
+        Assert.notNull(resultDTO, "QuestionResultDTO không được null");
+
+        WebSocketMessage<QuestionResultDTO> message = new WebSocketMessage<>("QUESTION_RESULT", resultDTO);
+        messagingTemplate.convertAndSend(ROOM_TOPIC_PREFIX + roomId + QUESTION_RESULT_EVENT, message);
+    }
+
+    /**
+     * Gửi bảng xếp hạng
+     *
+     * @param roomId         ID phòng
+     * @param leaderboardDTO Dữ liệu bảng xếp hạng
+     */
+    public void sendLeaderboardEvent(Long roomId, LeaderboardDTO leaderboardDTO) {
+        Assert.notNull(roomId, "RoomId không được null");
+        Assert.notNull(leaderboardDTO, "LeaderboardDTO không được null");
+
+        WebSocketMessage<LeaderboardDTO> message = new WebSocketMessage<>("LEADERBOARD", leaderboardDTO);
+        messagingTemplate.convertAndSend(ROOM_TOPIC_PREFIX + roomId + LEADERBOARD_EVENT, message);
+    }
+
+    /**
+     * Gửi thông báo câu hỏi tiếp theo
+     *
+     * @param roomId             ID phòng
+     * @param nextQuestionNumber Số thứ tự câu hỏi tiếp theo
+     */
+    public void sendNextQuestionEvent(Long roomId, int nextQuestionNumber) {
+        Assert.notNull(roomId, "RoomId không được null");
+
+        Map<String, Integer> nextQuestionData = new HashMap<>();
+        nextQuestionData.put("questionNumber", nextQuestionNumber);
+        nextQuestionData.put("countdown", 5); // Đếm ngược 5 giây trước câu hỏi tiếp theo
+
+        WebSocketMessage<Map<String, Integer>> message = new WebSocketMessage<>("NEXT_QUESTION", nextQuestionData);
+        messagingTemplate.convertAndSend(ROOM_TOPIC_PREFIX + roomId + NEXT_QUESTION_EVENT, message);
+    }
+
+    /**
+     * Gửi kết quả cuối cùng khi kết thúc trò chơi
+     *
+     * @param roomId    ID phòng
+     * @param resultDTO Dữ liệu kết quả cuối cùng
+     */
+    public void sendGameEndEvent(Long roomId, GameResultDTO resultDTO) {
+        Assert.notNull(roomId, "RoomId không được null");
+        Assert.notNull(resultDTO, "GameResultDTO không được null");
+
+        WebSocketMessage<GameResultDTO> message = new WebSocketMessage<>("GAME_END", resultDTO);
+        messagingTemplate.convertAndSend(ROOM_TOPIC_PREFIX + roomId + GAME_END_EVENT, message);
     }
 }

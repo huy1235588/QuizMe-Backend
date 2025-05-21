@@ -31,7 +31,7 @@ public class QuestionResultDTO {
     @AllArgsConstructor
     public static class OptionStatDTO {
         private Long optionId;
-        private Integer percentage;
+        private Double percentage;
     }
 
     /**

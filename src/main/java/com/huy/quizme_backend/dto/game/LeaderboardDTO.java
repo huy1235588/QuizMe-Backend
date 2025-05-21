@@ -15,8 +15,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class LeaderboardDTO {
-    private List<RankingDTO> rankings;
-    
+    private List<PlayerRankingDTO> rankings;
+
     /**
      * DTO cho thông tin xếp hạng của một người chơi
      */
@@ -24,12 +24,13 @@ public class LeaderboardDTO {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class RankingDTO {
+    public static class PlayerRankingDTO {
         private Long userId;
         private String username;
         private Integer score;
         private Integer rank;
         private String avatar;
         private Boolean isGuest;
+        private Integer correctCount;
     }
 }

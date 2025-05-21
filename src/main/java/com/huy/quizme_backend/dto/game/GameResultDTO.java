@@ -19,17 +19,17 @@ public class GameResultDTO {
     private String quizTitle;
     private Integer totalQuestions;
     private Integer duration;
-    private List<FinalRankingDTO> finalRankings;
+    private List<FinalPlayerRankingDTO> finalRankings;
     private List<QuestionStatDTO> questionStats;
 
     /**
-     * DTO cho thông tin xếp hạng của một người chơi
+     * DTO cho thông tin xếp hạng cuối cùng của một người chơi
      */
     @Data
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class FinalRankingDTO {
+    public static class FinalPlayerRankingDTO {
         private Long userId;
         private String username;
         private Integer score;
@@ -48,6 +48,6 @@ public class GameResultDTO {
     @AllArgsConstructor
     public static class QuestionStatDTO {
         private Long questionId;
-        private Integer correctPercentage;
+        private Double correctPercentage;
     }
 }

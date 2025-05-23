@@ -27,14 +27,10 @@ public interface RoomParticipantRepository extends JpaRepository<RoomParticipant
 
     Optional<RoomParticipant> findByRoomAndGuestName(Room room, String guestName);
 
-    Optional<RoomParticipant> findByRoomIdAndGuestId(Long roomId, String guestId);
-
     // Đếm số lượng người tham gia
     int countByRoom(Room room);
 
     int countByRoomId(Long roomId);
-
-    int countByRoomIdAndIsReady(Long roomId, boolean isReady);
 
     // Tìm ID của người tham gia dựa trên roomId và userId
     @Query("SELECT p.id FROM RoomParticipant p WHERE p.room.id = :roomId AND p.user.id = :userId")

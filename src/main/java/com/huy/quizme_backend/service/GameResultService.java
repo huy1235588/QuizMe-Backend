@@ -26,7 +26,8 @@ public class GameResultService {
      * Lưu kết quả trò chơi
      */
     public GameResult saveGameResult(GameResult gameResult) {
-        throw new UnsupportedOperationException("Chưa triển khai saveGameResult");
+        // Lưu kết quả trò chơi vào cơ sở dữ liệu
+        return gameResultRepository.save(gameResult);
     }
 
     /**

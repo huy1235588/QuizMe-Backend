@@ -1,6 +1,7 @@
 package com.huy.quizme_backend.repository;
 
 import com.huy.quizme_backend.enity.Question;
+import com.huy.quizme_backend.enity.Quiz;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -13,4 +14,6 @@ public interface QuestionRepository extends JpaRepository<Question, Long> {
 
     // Find questions by quiz ID and order number range
     List<Question> findByQuizIdAndOrderNumberBetweenOrderByOrderNumber(Long quizId, Integer startOrder, Integer endOrder);
+
+    List<Question> findByQuiz(Quiz quiz);
 }

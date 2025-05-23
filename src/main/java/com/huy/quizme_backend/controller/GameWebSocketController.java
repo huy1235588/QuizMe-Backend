@@ -4,6 +4,7 @@ import com.huy.quizme_backend.dto.game.AnswerRequest;
 import com.huy.quizme_backend.service.GameSessionService;
 import com.huy.quizme_backend.service.GameProgressService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -16,17 +17,10 @@ import java.security.Principal;
  */
 @Controller
 @RequiredArgsConstructor
+@Slf4j
 public class GameWebSocketController {
     private final GameSessionService gameSessionService;
     private final GameProgressService gameProgressService;
-
-    /**
-     * Xử lý khi người chơi sẵn sàng bắt đầu.
-     */
-    @MessageMapping("/room/{roomId}/ready")
-    public void handlePlayerReady(@DestinationVariable Long roomId, Principal principal) {
-        throw new UnsupportedOperationException("Chưa triển khai handlePlayerReady");
-    }
 
     /**
      * Xử lý khi người chơi gửi câu trả lời.
@@ -35,6 +29,22 @@ public class GameWebSocketController {
     public void handlePlayerAnswer(@DestinationVariable Long roomId,
                                    @Payload AnswerRequest answer,
                                    Principal principal) {
-        throw new UnsupportedOperationException("Chưa triển khai handlePlayerAnswer");
+        log.info("Received answer from user {} for question {} in room {}",
+                principal.getName(), answer.getQuestionId(), roomId);
+
+        try {
+            // Lấy userId từ principal
+            Long userId = Long.parseLong(principal.getName());
+
+            // Xử lý câu trả lời thông qua GameSessionService
+            boolean success = gameSessionService.processAnswerSubmission(roomId, userId, answer);
+
+            if (!success) {
+                log.warn("Failed to process answer submission for user {} in room {}", userId, roomId);
+            }
+        } catch (Exception e) {
+            log.error("Error processing answer from user {} in room {}: {}",
+                    principal.getName(), roomId, e.getMessage(), e);
+        }
     }
 }

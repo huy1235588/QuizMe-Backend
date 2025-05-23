@@ -26,12 +26,6 @@ public interface GamePlayerAnswerRepository extends JpaRepository<GamePlayerAnsw
 
     List<GamePlayerAnswer> findByQuestion(Question question);
 
-    // Tìm theo Participant
-    List<GamePlayerAnswer> findByRoomParticipantId(Long participantId);
-
-    // Tìm cụ thể
-    Optional<GamePlayerAnswer> findByRoomParticipantIdAndQuestionId(Long participantId, Long questionId);
-
     // Đếm đáp án đúng
     @Query("SELECT COUNT(gpa) FROM GamePlayerAnswer gpa WHERE gpa.gameResult.id = ?1 AND gpa.isCorrect = true")
     Long countCorrectAnswersByGameResult(Long gameResultId);

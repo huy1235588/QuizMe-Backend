@@ -53,4 +53,13 @@ public class GamePlayerAnswer {
 
     @OneToMany(mappedBy = "gamePlayerAnswer", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<GamePlayerAnswerOption> selectedOptions = new ArrayList<>();
+
+    // Lấy danh sách id của các lựa chọn đã chọn
+    public List<Long> getSelectedOptionIds() {
+        List<Long> selectedOptionIds = new ArrayList<>();
+        for (GamePlayerAnswerOption option : selectedOptions) {
+            selectedOptionIds.add(option.getOption().getId());
+        }
+        return selectedOptionIds;
+    }
 }

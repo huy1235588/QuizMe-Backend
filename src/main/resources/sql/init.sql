@@ -310,18 +310,24 @@ CREATE TABLE IF NOT EXISTS room
     is_public   BOOLEAN           DEFAULT TRUE,
     max_players INT               DEFAULT 10,
     status      ENUM (
-        'waiting',
-        'in_progress',
-        'completed',
-        'cancelled')              DEFAULT 'waiting',
+        'WAITING',
+        'IN_PROGRESS',
+        'COMPLETED',
+        'CANCELLED'
+        )                         DEFAULT 'WAITING',
     start_time  TIMESTAMP    NULL DEFAULT NULL,
     end_time    TIMESTAMP    NULL DEFAULT NULL,
 
     created_at  TIMESTAMP         DEFAULT CURRENT_TIMESTAMP,
-    updated_at  TIMESTAMP         DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP         DEFAULT CURRENT_TIMESTAMP ON
+        UPDATE CURRENT_TIMESTAMP,
 
-    FOREIGN KEY (quiz_id) REFERENCES quiz (id) ON DELETE CASCADE,
-    FOREIGN KEY (host_id) REFERENCES user (id) ON DELETE CASCADE,
+    FOREIGN KEY (quiz_id) REFERENCES quiz (id)
+        ON
+            DELETE CASCADE,
+    FOREIGN KEY (host_id) REFERENCES user (id)
+        ON
+            DELETE CASCADE,
     index idx_quiz_id (quiz_id),
     INDEX idx_code (code),
     INDEX idx_host_id (host_id),

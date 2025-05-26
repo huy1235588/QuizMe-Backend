@@ -6,7 +6,6 @@ import com.huy.quizme_backend.dto.game.GameStateDTO;
 import com.huy.quizme_backend.dto.game.LeaderboardDTO;
 import com.huy.quizme_backend.dto.game.QuestionGameDTO;
 import com.huy.quizme_backend.dto.game.QuestionResultDTO;
-import com.huy.quizme_backend.dto.response.RoomResponse;
 import com.huy.quizme_backend.enity.GamePlayerAnswer;
 import com.huy.quizme_backend.enity.GameResult;
 import com.huy.quizme_backend.enity.Question;
@@ -20,19 +19,23 @@ import com.huy.quizme_backend.session.GameSession;
 import com.huy.quizme_backend.session.GameStatus;
 import com.huy.quizme_backend.session.ParticipantSession;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import jakarta.annotation.PreDestroy;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Quản lý vòng đời và trạng thái phiên chơi game.
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class GameSessionService {
     private final WebSocketService webSocketService;
     private final LocalStorageService localStorageService;
@@ -41,8 +44,13 @@ public class GameSessionService {
     private final RoomRepository roomRepository;
     private final RoomParticipantRepository roomParticipantRepository;
     private final QuizRepository quizRepository;
-    private final QuestionRepository questionRepository;    // Lưu trữ trạng thái các phiên chơi in-memory
+    private final QuestionRepository questionRepository;
+
+    // Lưu trữ trạng thái các phiên chơi in-memory
     private final ConcurrentMap<Long, GameSession> sessions = new ConcurrentHashMap<>();
+
+    // Thread pool để quản lý các timer
+    private final ScheduledExecutorService timerExecutor = Executors.newScheduledThreadPool(10);
 
     /**
      * Khởi tạo phiên chơi mới.
@@ -127,22 +135,17 @@ public class GameSessionService {
 
         // Cập nhật URL hình ảnh nếu có
         currentQuestion.setImageUrl(localStorageService.getQuestionImageUrl(currentQuestion.getImageUrl()));
-
         // Gửi câu hỏi đến tất cả người chơi
         webSocketService.sendQuestionEvent(roomId, currentQuestion);
 
         // Huỷ timer hiện tại nếu có
-        if (gameSession.getCurrentTimer() != null && !gameSession.getCurrentTimer().isDone()) {
-            gameSession.getCurrentTimer().cancel(true);
-        }
+        cancelCurrentTimer(gameSession);
 
-        // Lên lịch kết thúc câu hỏi sau timeLimit
-        gameSession.setCurrentTimer(
-                java.util.concurrent.Executors.newSingleThreadScheduledExecutor()
-                        .schedule(() -> endCurrentQuestion(roomId),
-                                currentQuestion.getTimeLimit(),
-                                java.util.concurrent.TimeUnit.SECONDS)
-        );
+        log.info("Bắt đầu câu hỏi {} cho phòng {}. Thời gian: {} giây",
+                questionIndex + 1, roomId, currentQuestion.getTimeLimit());
+
+        // Bắt đầu timer đếm ngược từng giây
+        startQuestionTimer(roomId, currentQuestion.getTimeLimit());
     }
 
     /**
@@ -190,14 +193,21 @@ public class GameSessionService {
             return;
         }
 
-        // Đặt trạng thái là kết thúc câu hỏi
-        gameSession.setStatus(GameStatus.QUESTION_END);
+        log.info("Kết thúc câu hỏi {} trong phòng {}",
+                gameSession.getCurrentQuestionIndex() + 1, roomId);
 
-        // Lấy câu hỏi hiện tại
+        // Hủy các timer hiện tại
+        cancelCurrentTimer(gameSession);
+
+        // Đặt trạng thái là kết thúc câu hỏi
+        gameSession.setStatus(GameStatus.QUESTION_END);        // Lấy câu hỏi hiện tại
         QuestionGameDTO currentQuestionDTO = gameSession.getQuestions().get(gameSession.getCurrentQuestionIndex());
-        Question currentQuestionEntity = questionRepository.findById(currentQuestionDTO.getQuestionId()).orElse(null);
+        // Sử dụng findByIdWithOptions để eager load options và tránh lỗi lazy loading trong timer thread
+        Question currentQuestionEntity = questionRepository.findByIdWithOptions(currentQuestionDTO.getQuestionId()).orElse(null);
 
         if (currentQuestionEntity == null) {
+            log.error("Không tìm thấy câu hỏi với ID {} trong phòng {}",
+                    currentQuestionDTO.getQuestionId(), roomId);
             return;
         }
 
@@ -215,9 +225,11 @@ public class GameSessionService {
         int nextQuestionIndex = gameSession.getCurrentQuestionIndex() + 1;
         if (nextQuestionIndex >= gameSession.getQuestions().size()) {
             // Hết câu hỏi, kết thúc game
+            log.info("Hết câu hỏi, kết thúc game trong phòng {}", roomId);
             endGame(roomId);
         } else {
             // Bắt đầu đếm ngược cho câu hỏi tiếp theo
+            log.info("Bắt đầu đếm ngược 5 giây cho câu hỏi tiếp theo trong phòng {}", roomId);
             startNextQuestionCountdown(roomId, 5); // 5 giây countdown
         }
     }
@@ -228,6 +240,7 @@ public class GameSessionService {
     public void startNextQuestionCountdown(Long roomId, int seconds) {
         GameSession gameSession = sessions.get(roomId);
         if (gameSession == null) {
+            log.warn("Không tìm thấy phiên chơi {} để bắt đầu đếm ngược", roomId);
             return;
         }
 
@@ -238,19 +251,64 @@ public class GameSessionService {
         int nextQuestionNumber = gameSession.getCurrentQuestionIndex() + 2; // +1 cho index, +1 cho số thứ tự
         webSocketService.sendNextQuestionEvent(roomId, nextQuestionNumber);
 
-        // Huỷ timer hiện tại nếu có
-        if (gameSession.getCurrentTimer() != null && !gameSession.getCurrentTimer().isDone()) {
-            gameSession.getCurrentTimer().cancel(true);
-        }
+        log.info("Bắt đầu đếm ngược {} giây cho câu hỏi {} trong phòng {}",
+                seconds, nextQuestionNumber, roomId);
 
-        // Lên lịch bắt đầu câu hỏi tiếp theo
-        gameSession.setCurrentTimer(
-                java.util.concurrent.Executors.newSingleThreadScheduledExecutor()
-                        .schedule(() -> {
-                            int nextQuestionIndex = gameSession.getCurrentQuestionIndex() + 1;
-                            startQuestion(roomId, nextQuestionIndex);
-                        }, seconds, java.util.concurrent.TimeUnit.SECONDS)
-        );
+        // Hủy timer hiện tại nếu có
+        cancelCurrentTimer(gameSession);
+
+        // Bắt đầu timer đếm ngược từng giây
+        AtomicBoolean countdownActive = new AtomicBoolean(true);
+
+        ScheduledFuture<?> countdownTask = timerExecutor.scheduleAtFixedRate(() -> {
+            if (!countdownActive.get()) {
+                return;
+            }
+
+            try {
+                GameSession session = sessions.get(roomId);
+                if (session == null || session.getStatus() != GameStatus.NEXT_QUESTION) {
+                    countdownActive.set(false);
+                    return;
+                }
+
+                // Tính thời gian đã trôi qua kể từ khi bắt đầu đếm ngược
+                long elapsedTime = Duration.between(session.getStartTime(), LocalDateTime.now()).getSeconds();
+                int remainingTime = Math.max(0, seconds - (int) elapsedTime);
+
+                log.debug("Đếm ngược câu hỏi tiếp theo - Phòng {}: {} giây còn lại", roomId, remainingTime);
+
+                // Gửi timer event với countdown
+                webSocketService.sendTimerEvent(roomId, remainingTime, seconds);
+
+                if (remainingTime <= 0) {
+                    countdownActive.set(false);
+                    log.info("Kết thúc đếm ngược, bắt đầu câu hỏi tiếp theo trong phòng {}", roomId);
+                    int nextQuestionIndex = session.getCurrentQuestionIndex() + 1;
+                    startQuestion(roomId, nextQuestionIndex);
+                }
+
+            } catch (Exception e) {
+                log.error("Lỗi khi xử lý countdown cho phòng {}: {}", roomId, e.getMessage(), e);
+                countdownActive.set(false);
+            }
+        }, 0, 1, TimeUnit.SECONDS);
+
+        // Backup timer để đảm bảo chuyển câu hỏi
+        ScheduledFuture<?> backupTask = timerExecutor.schedule(() -> {
+            countdownActive.set(false);
+            if (countdownTask != null && !countdownTask.isDone()) {
+                countdownTask.cancel(true);
+            }
+            log.info("Backup countdown timer kích hoạt cho phòng {}", roomId);
+            int nextQuestionIndex = gameSession.getCurrentQuestionIndex() + 1;
+            startQuestion(roomId, nextQuestionIndex);
+        }, seconds + 1, TimeUnit.SECONDS);
+
+        // Cập nhật thời gian bắt đầu đếm ngược
+        gameSession.setStartTime(LocalDateTime.now());
+        gameSession.setCurrentTimer(countdownTask);
+        gameSession.setEndTimer(backupTask);
     }
 
     /**
@@ -259,17 +317,18 @@ public class GameSessionService {
     public GameResultDTO endGame(Long roomId) {
         GameSession gameSession = sessions.get(roomId);
         if (gameSession == null) {
+            log.warn("Không tìm thấy phiên chơi {} để kết thúc", roomId);
             return null;
         }
+
+        log.info("Kết thúc trò chơi trong phòng {}", roomId);
 
         // Đặt trạng thái kết thúc
         gameSession.setStatus(GameStatus.COMPLETED);
         gameSession.setEndTime(LocalDateTime.now());
 
-        // Huỷ timer hiện tại nếu có
-        if (gameSession.getCurrentTimer() != null && !gameSession.getCurrentTimer().isDone()) {
-            gameSession.getCurrentTimer().cancel(true);
-        }
+        // Huỷ tất cả timer hiện tại
+        cancelCurrentTimer(gameSession);
 
         // Tính toán kết quả cuối cùng
         GameResult savedGameResult = gameProgressService.finalizeResults(gameSession);
@@ -380,5 +439,121 @@ public class GameSessionService {
         return gameSession.getStatus() == GameStatus.IN_PROGRESS ||
                 gameSession.getStatus() == GameStatus.QUESTION_END ||
                 gameSession.getStatus() == GameStatus.NEXT_QUESTION;
+    }
+
+    /**
+     * Cleanup method to properly shutdown the timer executor when service is destroyed.
+     */
+    @PreDestroy
+    public void cleanup() {
+        log.info("Shutting down GameSessionService timer executor");
+
+        // Cancel all active timers
+        sessions.values().forEach(this::cancelCurrentTimer);
+
+        // Shutdown the executor
+        timerExecutor.shutdown();
+        try {
+            if (!timerExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+                log.warn("Timer executor did not terminate gracefully, forcing shutdown");
+                timerExecutor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            log.error("Interrupted while waiting for timer executor to terminate", e);
+            timerExecutor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+
+        log.info("GameSessionService cleanup completed");
+    }
+
+    /**
+     * Get statistics about active game sessions for monitoring.
+     */
+    public String getSessionStatistics() {
+        int totalSessions = sessions.size();
+        long activeSessions = sessions.values().stream()
+                .mapToLong(session -> isGameActive(session.getRoomId()) ? 1L : 0L)
+                .sum();
+
+        return String.format("Total sessions: %d, Active sessions: %d", totalSessions, activeSessions);
+    }
+
+    /**
+     * Bắt đầu timer đếm ngược từng giây cho câu hỏi.
+     */
+    private void startQuestionTimer(Long roomId, int totalSeconds) {
+        GameSession gameSession = sessions.get(roomId);
+        if (gameSession == null) {
+            log.warn("Không tìm thấy phiên chơi {} để bắt đầu timer", roomId);
+            return;
+        }
+
+        AtomicBoolean timerActive = new AtomicBoolean(true);
+
+        // Lập lịch gửi timer event mỗi giây
+        ScheduledFuture<?> timerTask = timerExecutor.scheduleAtFixedRate(() -> {
+            if (!timerActive.get()) {
+                return;
+            }
+
+            try {
+                GameSession session = sessions.get(roomId);
+                if (session == null || session.getStatus() != GameStatus.IN_PROGRESS) {
+                    timerActive.set(false);
+                    return;
+                }
+
+                int remainingTime = getRemainingTime(roomId);
+
+                // Log mỗi 5 giây để không spam log
+                if (remainingTime % 5 == 0 || remainingTime <= 5) {
+                    log.debug("Phòng {}: Thời gian còn lại {} giây", roomId, remainingTime);
+                }
+
+                // Gửi timer event đến client
+                webSocketService.sendTimerEvent(roomId, remainingTime, totalSeconds);
+
+                // Kết thúc câu hỏi khi hết thời gian
+                if (remainingTime <= 0) {
+                    timerActive.set(false);
+                    log.info("Hết thời gian cho câu hỏi trong phòng {}", roomId);
+                    endCurrentQuestion(roomId);
+                }
+
+            } catch (Exception e) {
+                log.error("Lỗi khi xử lý timer cho phòng {}: {}", roomId, e.getMessage(), e);
+                timerActive.set(false);
+            }
+        }, 0, 1, TimeUnit.SECONDS);
+
+        // Lập lịch kết thúc câu hỏi sau thời gian quy định (backup timer)
+        ScheduledFuture<?> endTask = timerExecutor.schedule(() -> {
+            timerActive.set(false);
+            if (!timerTask.isDone()) {
+                timerTask.cancel(true);
+            }
+            log.info("Backup timer kết thúc câu hỏi cho phòng {}", roomId);
+            endCurrentQuestion(roomId);
+        }, totalSeconds + 1, TimeUnit.SECONDS); // +1 giây để đảm bảo timer chính chạy trước
+
+        // Lưu timer vào session
+        gameSession.setCurrentTimer(timerTask);
+        gameSession.setEndTimer(endTask);
+    }
+
+    /**
+     * Hủy timer hiện tại của phiên chơi.
+     */
+    private void cancelCurrentTimer(GameSession gameSession) {
+        if (gameSession.getCurrentTimer() != null && !gameSession.getCurrentTimer().isDone()) {
+            gameSession.getCurrentTimer().cancel(true);
+            log.debug("Đã hủy timer chính cho phòng {}", gameSession.getRoomId());
+        }
+
+        if (gameSession.getEndTimer() != null && !gameSession.getEndTimer().isDone()) {
+            gameSession.getEndTimer().cancel(true);
+            log.debug("Đã hủy backup timer cho phòng {}", gameSession.getRoomId());
+        }
     }
 }

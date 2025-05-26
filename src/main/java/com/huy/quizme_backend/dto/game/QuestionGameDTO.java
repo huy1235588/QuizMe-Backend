@@ -3,6 +3,7 @@ package com.huy.quizme_backend.dto.game;
 import com.huy.quizme_backend.enity.Question;
 import com.huy.quizme_backend.enity.QuestionOption;
 import com.huy.quizme_backend.enity.enums.QuestionType;
+import com.huy.quizme_backend.service.LocalStorageService;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -60,11 +61,15 @@ public class QuestionGameDTO {
     }
 
     // Chuyển đổi từ entity sang DTO
-    public static QuestionGameDTO fromEntity(Question question) {
+    public static QuestionGameDTO fromEntity(Question question, LocalStorageService localStorageService) {
+        String imageUrl = question.getImageUrl() != null && !question.getImageUrl().isEmpty()
+                ? localStorageService.getQuestionImageUrl(question.getImageUrl())
+                : null;
+
         return QuestionGameDTO.builder()
                 .questionId(question.getId())
                 .content(question.getContent())
-                .imageUrl(question.getImageUrl())
+                .imageUrl(imageUrl)
                 .audioUrl(question.getAudioUrl())
                 .videoUrl(question.getVideoUrl())
                 .type(question.getType())

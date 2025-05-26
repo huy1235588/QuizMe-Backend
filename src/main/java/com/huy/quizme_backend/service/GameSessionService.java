@@ -35,6 +35,7 @@ import java.util.concurrent.ConcurrentMap;
 @RequiredArgsConstructor
 public class GameSessionService {
     private final WebSocketService webSocketService;
+    private final LocalStorageService localStorageService;
     private final GameProgressService gameProgressService;
     private final GameResultService gameResultService;
     private final RoomRepository roomRepository;
@@ -123,6 +124,9 @@ public class GameSessionService {
 
         // Lấy câu hỏi hiện tại
         QuestionGameDTO currentQuestion = gameSession.getQuestions().get(questionIndex);
+
+        // Cập nhật URL hình ảnh nếu có
+        currentQuestion.setImageUrl(localStorageService.getQuestionImageUrl(currentQuestion.getImageUrl()));
 
         // Gửi câu hỏi đến tất cả người chơi
         webSocketService.sendQuestionEvent(roomId, currentQuestion);

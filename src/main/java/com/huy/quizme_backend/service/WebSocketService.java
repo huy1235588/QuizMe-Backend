@@ -154,8 +154,9 @@ public class WebSocketService {
         Assert.notNull(roomId, "RoomId không được null");
         Assert.notNull(questionDTO, "QuestionGameDTO không được null");
 
-        WebSocketMessage<QuestionGameDTO> message = new WebSocketMessage<>("QUESTION", questionDTO);
-        messagingTemplate.convertAndSend(ROOM_TOPIC_PREFIX + roomId + QUESTION_EVENT, message);
+        // Gửi tin nhắn đến topic phòng với sự kiện câu hỏi
+        String destination = buildDestination(roomId, QUESTION_EVENT);
+        sendMessage(destination, "QUESTION", questionDTO);
     }
 
     /**
@@ -172,8 +173,9 @@ public class WebSocketService {
         timerData.put("seconds", remainingSeconds);
         timerData.put("totalTime", totalTime);
 
-        WebSocketMessage<Map<String, Integer>> message = new WebSocketMessage<>("TIMER", timerData);
-        messagingTemplate.convertAndSend(ROOM_TOPIC_PREFIX + roomId + TIMER_EVENT, message);
+        // Gửi tin nhắn đến topic phòng với sự kiện đếm ngược
+        String destination = buildDestination(roomId, TIMER_EVENT);
+        sendMessage(destination, "TIMER", timerData);
     }
 
     /**
@@ -186,8 +188,9 @@ public class WebSocketService {
         Assert.notNull(roomId, "RoomId không được null");
         Assert.notNull(resultDTO, "QuestionResultDTO không được null");
 
-        WebSocketMessage<QuestionResultDTO> message = new WebSocketMessage<>("QUESTION_RESULT", resultDTO);
-        messagingTemplate.convertAndSend(ROOM_TOPIC_PREFIX + roomId + QUESTION_RESULT_EVENT, message);
+        // Gửi tin nhắn đến topic phòng với sự kiện kết quả câu hỏi
+        String destination = buildDestination(roomId, QUESTION_RESULT_EVENT);
+        sendMessage(destination, "QUESTION_RESULT", resultDTO);
     }
 
     /**
@@ -200,8 +203,9 @@ public class WebSocketService {
         Assert.notNull(roomId, "RoomId không được null");
         Assert.notNull(leaderboardDTO, "LeaderboardDTO không được null");
 
-        WebSocketMessage<LeaderboardDTO> message = new WebSocketMessage<>("LEADERBOARD", leaderboardDTO);
-        messagingTemplate.convertAndSend(ROOM_TOPIC_PREFIX + roomId + LEADERBOARD_EVENT, message);
+        // Gửi tin nhắn đến topic phòng với sự kiện bảng xếp hạng
+        String destination = buildDestination(roomId, LEADERBOARD_EVENT);
+        sendMessage(destination, "LEADERBOARD", leaderboardDTO);
     }
 
     /**
@@ -217,8 +221,9 @@ public class WebSocketService {
         nextQuestionData.put("questionNumber", nextQuestionNumber);
         nextQuestionData.put("countdown", 5); // Đếm ngược 5 giây trước câu hỏi tiếp theo
 
-        WebSocketMessage<Map<String, Integer>> message = new WebSocketMessage<>("NEXT_QUESTION", nextQuestionData);
-        messagingTemplate.convertAndSend(ROOM_TOPIC_PREFIX + roomId + NEXT_QUESTION_EVENT, message);
+        // Gửi tin nhắn đến topic phòng với sự kiện câu hỏi tiếp theo
+        String destination = buildDestination(roomId, NEXT_QUESTION_EVENT);
+        sendMessage(destination, "NEXT_QUESTION", nextQuestionData);
     }
 
     /**
@@ -231,7 +236,8 @@ public class WebSocketService {
         Assert.notNull(roomId, "RoomId không được null");
         Assert.notNull(resultDTO, "GameResultDTO không được null");
 
-        WebSocketMessage<GameResultDTO> message = new WebSocketMessage<>("GAME_END", resultDTO);
-        messagingTemplate.convertAndSend(ROOM_TOPIC_PREFIX + roomId + GAME_END_EVENT, message);
+        // Gửi tin nhắn đến topic phòng với sự kiện kết thúc trò chơi
+        String destination = buildDestination(roomId, GAME_END_EVENT);
+        sendMessage(destination, "GAME_END", resultDTO);
     }
 }

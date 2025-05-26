@@ -1,15 +1,13 @@
 package com.huy.quizme_backend.controller;
 
 import com.huy.quizme_backend.dto.response.ApiResponse;
-import com.huy.quizme_backend.dto.response.RoomResponse;
 import com.huy.quizme_backend.dto.response.GameStatusResponse;
 import com.huy.quizme_backend.service.GameSessionService;
 import com.huy.quizme_backend.service.GameProgressService;
 import com.huy.quizme_backend.service.RoomService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
 
-import java.security.Principal;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * APIs để quản lý trò chơi.
@@ -26,8 +24,16 @@ public class GameRestController {
      * Bắt đầu trò chơi trong phòng.
      */
     @PostMapping("/rooms/{roomId}/start")
-    public ApiResponse<RoomResponse> startGame(@PathVariable Long roomId, Principal principal) {
-        throw new UnsupportedOperationException("Chưa triển khai startGame API");
+    public ApiResponse<Boolean> startGame(
+            @PathVariable Long roomId
+    ) {
+        // Khởi tạo phiên trò chơi
+        gameSessionService.initGameSession(roomId);
+
+        // Bắt đầu tiến trình trò chơi
+        Boolean started = gameSessionService.startGame(roomId);
+
+        return ApiResponse.success(started, "Game started successfully");
     }
 
     /**

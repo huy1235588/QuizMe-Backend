@@ -103,6 +103,7 @@ public class SecurityConfig {
                                 "/api/questions/**",
                                 "/api/rooms/**",
                                 "/api/chat/**",
+                                "/api/game/**",
                                 "/api/users/**").permitAll()
                         // Thêm các endpoint public khác nếu có
                         .requestMatchers("/uploads/**").permitAll() // Cho phép truy cập vào endpoint upload

@@ -6,6 +6,7 @@ import com.huy.quizme_backend.dto.game.GameStateDTO;
 import com.huy.quizme_backend.dto.game.LeaderboardDTO;
 import com.huy.quizme_backend.dto.game.QuestionGameDTO;
 import com.huy.quizme_backend.dto.game.QuestionResultDTO;
+import com.huy.quizme_backend.dto.response.RoomResponse;
 import com.huy.quizme_backend.enity.GamePlayerAnswer;
 import com.huy.quizme_backend.enity.GameResult;
 import com.huy.quizme_backend.enity.Question;
@@ -45,7 +46,9 @@ public class GameSessionService {
     /**
      * Khởi tạo phiên chơi mới.
      */
-    public GameSession initGameSession(Long roomId, Long quizId) {
+    public GameSession initGameSession(Long roomId) {
+        Long quizId = roomRepository.findQuizIdById(roomId);
+
         // Khởi tạo phiên chơi
         GameSession gameSession = new GameSession();
         gameSession.setRoomId(roomId);

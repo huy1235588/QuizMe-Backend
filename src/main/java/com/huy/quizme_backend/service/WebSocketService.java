@@ -30,6 +30,7 @@ public class WebSocketService {
     public static final String ROOM_TOPIC_PREFIX = "/topic/room/";
     public static final String CHAT_EVENT = "/chat";
     public static final String GAME_START_EVENT = "/start";
+    public static final String GAME_CLOSE_EVENT = "/close";
     public static final String PLAYER_JOIN_EVENT = "/player-join";
     public static final String PLAYER_LEAVE_EVENT = "/player-leave";
     public static final String GAME_PROGRESS_EVENT = "/progress";
@@ -91,6 +92,14 @@ public class WebSocketService {
     public <T> void sendGameStartEvent(Long roomId, T payload) {
         String destination = buildDestination(roomId, GAME_START_EVENT);
         sendMessage(destination, "GAME_START", payload);
+    }
+
+    /**
+     * Gửi sự kiện đóng trò chơi đến một phòng cụ thể
+     */
+    public <T> void sendGameCloseEvent(Long roomId, T payload) {
+        String destination = buildDestination(roomId, GAME_CLOSE_EVENT);
+        sendMessage(destination, "GAME_CLOSE", payload);
     }
 
     /**

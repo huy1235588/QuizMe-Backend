@@ -417,10 +417,13 @@ public class RoomService {
         room.setStatus(RoomStatus.CANCELLED);
         room = roomRepository.save(room);
 
-        // Thông báo cho tất cả người trong phòng
-        webSocketService.sendRoomEvent(roomId, "close", "Room has been closed by the host");
+        // Tạo thông tin phòng đã đóng
+        RoomResponse roomResponse = RoomResponse.fromRoom(room, localStorageService);
 
-        return RoomResponse.fromRoom(room, localStorageService);
+        // Thông báo cho tất cả người trong phòng
+        webSocketService.sendGameCloseEvent(roomId, roomResponse);
+
+        return roomResponse;
     }
 
     /**
@@ -566,11 +569,14 @@ public class RoomService {
         room.setStatus(RoomStatus.IN_PROGRESS);
         room = roomRepository.save(room);
 
+        // Tạo thông tin phòng đã bắt đầu
+        RoomResponse roomResponse = RoomResponse.fromRoom(room, localStorageService);
+
         // Gửi thông báo qua WebSocket
-        webSocketService.sendGameStartEvent(roomId, "Game started");
+        webSocketService.sendGameStartEvent(roomId, roomResponse);
 
         // Trả về thông tin phòng đã cập nhật
-        return RoomResponse.fromRoom(room, localStorageService);
+        return roomResponse;
     }
 
     /**
@@ -668,6 +674,6 @@ public class RoomService {
         roomRepository.save(room);
 
         // Thông báo cho tất cả người trong phòng
-        webSocketService.sendRoomEvent(room.getId(), "close", "Room has been closed because the host was disconnected");
+        webSocketService.sendGameCloseEvent(room.getId(), RoomResponse.fromRoom(room, localStorageService));
     }
 }

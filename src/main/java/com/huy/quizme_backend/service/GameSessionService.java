@@ -2,6 +2,7 @@ package com.huy.quizme_backend.service;
 
 import com.huy.quizme_backend.dto.game.AnswerRequest;
 import com.huy.quizme_backend.dto.game.GameResultDTO;
+import com.huy.quizme_backend.dto.game.GameResultDTO.FinalPlayerRankingDTO;
 import com.huy.quizme_backend.dto.game.GameStateDTO;
 import com.huy.quizme_backend.dto.game.LeaderboardDTO;
 import com.huy.quizme_backend.dto.game.QuestionGameDTO;
@@ -495,12 +496,15 @@ public class GameSessionService {
         // Tính toán kết quả cuối cùng
         GameResult savedGameResult = gameProgressService.finalizeResults(gameSession);
 
+        List<FinalPlayerRankingDTO> finalRankings = gameProgressService.generateFinalPlayerRankingDTO(gameSession);
+
         // Tạo GameResultDTO để gửi về client
         GameResultDTO resultDTO = GameResultDTO.builder()
                 .roomId(roomId)
                 .quizTitle(quizRepository.findById(gameSession.getQuizId()).orElse(null).getTitle())
                 .totalQuestions(gameSession.getQuestions().size())
                 .duration((int) java.time.Duration.between(gameSession.getStartTime(), gameSession.getEndTime()).getSeconds())
+                .finalRankings(finalRankings)
                 .build();
 
         // Gửi kết quả cuối cùng đến tất cả người chơi

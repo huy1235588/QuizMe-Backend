@@ -1,5 +1,6 @@
 package com.huy.quizme_backend.service;
 
+import com.huy.quizme_backend.dto.game.GameResultDTO.FinalPlayerRankingDTO;
 import com.huy.quizme_backend.dto.game.LeaderboardDTO;
 import com.huy.quizme_backend.dto.game.LeaderboardDTO.PlayerRankingDTO;
 import com.huy.quizme_backend.dto.game.QuestionGameDTO;
@@ -275,6 +276,32 @@ public class GameProgressService {
 
         // Trả về bảng xếp hạng
         return leaderboardDTO;
+    }
+
+    public List<FinalPlayerRankingDTO> generateFinalPlayerRankingDTO(GameSession session) {
+        // Lấy danh sách người chơi từ phiên
+        List<ParticipantSession> participants = new ArrayList<>(session.getParticipants().values());
+
+        // Sắp xếp danh sách người chơi theo điểm số
+        participants.sort(Comparator.comparingInt(ParticipantSession::getScore).reversed());
+
+        // Tạo danh sách bảng xếp hạng
+        List<PlayerRankingDTO> leaderboard = getPlayerRankingDTOS(participants);
+
+        // Chuyển đổi sang FinalPlayerRankingDTO
+        List<FinalPlayerRankingDTO> finalRankings = leaderboard.stream()
+                .map(player -> new FinalPlayerRankingDTO(
+                        player.getUserId(),
+                        player.getUsername(),
+                        player.getScore(),
+                        player.getRank(),
+                        player.getAvatar(),
+                        null,
+                        null // Correct answers not available in this context
+                ))
+                .collect(Collectors.toList());
+
+        return finalRankings;
     }
 
     private List<PlayerRankingDTO> getPlayerRankingDTOS(List<ParticipantSession> participants) {

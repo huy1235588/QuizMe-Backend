@@ -5,12 +5,10 @@ import com.huy.quizme_backend.dto.game.LeaderboardDTO.PlayerRankingDTO;
 import com.huy.quizme_backend.dto.game.QuestionGameDTO;
 import com.huy.quizme_backend.dto.game.QuestionGameDTO.QuestionOptionDTO;
 import com.huy.quizme_backend.dto.game.QuestionResultDTO;
+import com.huy.quizme_backend.dto.game.QuestionResultDTO.UserAnswerDTO;
 import com.huy.quizme_backend.enity.*;
 import com.huy.quizme_backend.enity.enums.QuestionType;
-import com.huy.quizme_backend.repository.QuestionOptionRepository;
-import com.huy.quizme_backend.repository.QuestionRepository;
-import com.huy.quizme_backend.repository.QuizRepository;
-import com.huy.quizme_backend.repository.RoomRepository;
+import com.huy.quizme_backend.repository.*;
 import com.huy.quizme_backend.session.GameSession;
 import com.huy.quizme_backend.session.ParticipantSession;
 import org.springframework.stereotype.Service;
@@ -27,9 +25,11 @@ import java.util.stream.Collectors;
 public class GameProgressService {
     private final QuizRepository quizRepository;
     private final RoomRepository RoomRepository;
+    private final UserRepository userRepository;
     private final QuestionRepository questionRepository;
     private final QuestionOptionRepository optionRepository;
     private final GameResultService gameResultService;
+    private final LocalStorageService localStorageService;
 
     /**
      * Tải đầy đủ thông tin Quiz và câu hỏi
@@ -136,19 +136,19 @@ public class GameProgressService {
         int basePoints = question.getPoints();
 
         // Lấy total time từ câu hỏi
-        int totalTime = question.getTimeLimit();
+        int totalTime = question.getTimeLimit() * 1000; // Chuyển đổi sang milliseconds
 
         // Lấy thời gian người chơi đã trả lời
         Double timeTaken = playerAnswer.getAnswerTime();
 
-        //
+        // Tính thời gian còn lại
         double timeRemaining = Math.max(0, totalTime - timeTaken);
 
-        // T
+        // Tính hệ số thưởng thời gian
         double timeBonusFactor = (timeRemaining / totalTime) * 0.5;
 
         // Tính điểm dựa trên thời gian
-        int score = (int) (basePoints * (basePoints * timeBonusFactor));
+        int score = (int) (basePoints + (basePoints * timeBonusFactor));
 
         // Xử lý điểm cho Checkbox
         if (question.getType() == QuestionType.CHECKBOX) {
@@ -197,8 +197,8 @@ public class GameProgressService {
         questionResultDTO.setExplanation(currentQuestionEntity.getExplanation());
         questionResultDTO.setFunFact(currentQuestionEntity.getFunFact());
 
-        // Đếm số lượng người chơi đã chọn từng tùy chọn
-        Map<Long, Integer> optionSelectionCounts = new HashMap<>();
+        // Tạo danh sách
+        List<UserAnswerDTO> userAnswers = new ArrayList<>();
 
         // Lặp qua từng người chơi trong phiên
         for (ParticipantSession participant : session.getParticipants().values()) {
@@ -207,26 +207,51 @@ public class GameProgressService {
 
             // Kiểm tra nếu người chơi đã trả lời câu hỏi này
             if (playerAnswer != null) {
-                // Kiểm tra xem câu trả lời có đúng không
+                // Kiểm tra tính đúng sai của câu trả lời
                 boolean isCorrect = validateAnswer(currentQuestionEntity, playerAnswer);
 
-                // Tính điểm cho câu trả lời
-                int scoreAwarded = calculateScore(currentQuestionEntity, playerAnswer, isCorrect);
+                // Tính điểm cho người chơi
+                int score = calculateScore(currentQuestionEntity, playerAnswer, isCorrect);
 
-                // Cập nhật kết quả cho người chơi
-                playerAnswer.setScore(scoreAwarded);
-                playerAnswer.setCorrect(isCorrect);
-                participant.setScore(participant.getScore() + scoreAwarded);
+                // Tạo UserAnswerDTO từ GamePlayerAnswer
+                UserAnswerDTO userAnswerDTO = UserAnswerDTO.fromEntity(playerAnswer);
+                userAnswerDTO.setUserId(participant.getUserId());
+                userAnswerDTO.setIsCorrect(isCorrect);
+                userAnswerDTO.setScore(score);
+                userAnswerDTO.setTimeTaken(playerAnswer.getAnswerTime());
 
-//                // Cập nhật số lượng người chơi đã chọn từng tùy chọn
-//                optionSelectionCounts.put(
-//                        playerAnswer.getSelectedOptionIds().getFirst(),
-//                        optionSelectionCounts.get(playerAnswer.getSelectedOptionIds().getFirst()) + 1
-//                );
+                // Thêm vào danh sách câu trả lời người dùng
+                userAnswers.add(userAnswerDTO);
 
-//                QuestionResultDTO.UserAnswerDTO userAnswerDTO = new QuestionResultDTO.UserAnswerDTO();
+                // Cập nhật điểm số cho người chơi
+                participant.setScore(participant.getScore() + score);
             }
         }
+
+        // Thiết lập danh sách câu trả lời người dùng cho QuestionResultDTO
+        questionResultDTO.setUserAnswer(userAnswers);
+
+        // Tính toán tỷ lệ lựa chọn cho từng tùy chọn
+        List<QuestionResultDTO.OptionStatDTO> optionStats = new ArrayList<>();
+
+        // Lấy tổng số người chơi đã trả lời câu hỏi này
+        int totalAnswers = session.getParticipants().size();
+        for (QuestionOption option : currentQuestionEntity.getOptions()) {
+            // Lấy số lượng người chơi đã chọn tùy chọn này
+            long count = session.getParticipants().values().stream()
+                    .filter(p -> p.getAnswers().containsKey(currentQuestionEntity.getId()))
+                    .filter(p -> p.getAnswers().get(currentQuestionEntity.getId()).getSelectedOptionIds().contains(option.getId()))
+                    .count();
+
+            // Tính tỷ lệ phần trăm
+            double percentage = totalAnswers > 0 ? (double) count / totalAnswers * 100 : 0.0;
+
+            // Tạo OptionStatDTO và thêm vào danh sách
+            QuestionResultDTO.OptionStatDTO optionStatDTO = QuestionResultDTO.OptionStatDTO.fromEntity(option, percentage);
+            optionStats.add(optionStatDTO);
+        }
+        // Thiết lập danh sách thống kê tùy chọn cho QuestionResultDTO
+        questionResultDTO.setOptionStats(optionStats);
 
         return questionResultDTO;
     }
@@ -252,17 +277,30 @@ public class GameProgressService {
         return leaderboardDTO;
     }
 
-    private static List<PlayerRankingDTO> getPlayerRankingDTOS(List<ParticipantSession> participants) {
+    private List<PlayerRankingDTO> getPlayerRankingDTOS(List<ParticipantSession> participants) {
         List<PlayerRankingDTO> leaderboard = new ArrayList<>();
 
         // Lặp qua từng người chơi và tạo PlayerRankingDTO
         for (int i = 0; i < participants.size(); i++) {
             ParticipantSession participant = participants.get(i);
+
+            // Lấy info người dùng
+            Long userId = participant.getUserId();
+
+            // Lấy avatar của người dùng từ repository
+            String avatar = userRepository.findAvatarByUserId(userId).orElse(null);
+
+            // Chuye
+            String urlAvatar = localStorageService.getProfileImageUrl(avatar);
+
+            // Tạo PlayerRankingDTO
             PlayerRankingDTO playerRankingDTO = new PlayerRankingDTO();
             playerRankingDTO.setUserId(participant.getUserId());
             playerRankingDTO.setUsername(participant.getUsername());
             playerRankingDTO.setScore(participant.getScore());
             playerRankingDTO.setRank(i + 1);
+            playerRankingDTO.setAvatar(urlAvatar);
+
             leaderboard.add(playerRankingDTO);
         }
         return leaderboard;

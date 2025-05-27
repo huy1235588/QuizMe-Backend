@@ -24,7 +24,7 @@ public class QuestionResultDTO {
     private String explanation;
     private String funFact;
     private List<OptionStatDTO> optionStats;
-    private UserAnswerDTO userAnswer;
+    private List<UserAnswerDTO> userAnswer;
 
     /**
      * DTO cho thống kê tỷ lệ lựa chọn
@@ -54,6 +54,7 @@ public class QuestionResultDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class UserAnswerDTO {
+        private  Long userId;
         private Boolean isCorrect;
         private Integer score;
         private Double timeTaken;
@@ -73,7 +74,7 @@ public class QuestionResultDTO {
             Question question,
             List<Long> correctOptionIds,
             List<OptionStatDTO> optionStats,
-            UserAnswerDTO userAnswer
+            List<UserAnswerDTO> userAnswer
     ) {
         return QuestionResultDTO.builder()
                 .questionId(question.getId())

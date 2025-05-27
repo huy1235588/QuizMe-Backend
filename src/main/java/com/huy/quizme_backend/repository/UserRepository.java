@@ -32,4 +32,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
             "GROUP BY u.id " +
             "ORDER BY SUM(q.playCount) DESC")
     List<User> findTopUsersByTotalQuizPlays();
+
+    // Lấy avatar của người dùng
+    @Query("SELECT u.profileImage " +
+            "FROM User u " +
+            "WHERE u.id = ?1")
+    Optional<String> findAvatarByUserId(Long userId);
 }

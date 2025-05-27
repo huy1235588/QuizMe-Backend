@@ -202,7 +202,7 @@ public class WebSocketService {
         Assert.notNull(roomId, "RoomId không được null");
 
         Map<String, Integer> timerData = new HashMap<>();
-        timerData.put("seconds", remainingSeconds);
+        timerData.put("remainingTime", remainingSeconds);
         timerData.put("totalTime", totalTime);
 
         // Gửi tin nhắn đến topic phòng với sự kiện đếm ngược

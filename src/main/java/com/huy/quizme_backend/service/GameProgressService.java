@@ -218,14 +218,13 @@ public class GameProgressService {
                 playerAnswer.setCorrect(isCorrect);
                 participant.setScore(participant.getScore() + scoreAwarded);
 
-                // Cập nhật số lượng người chơi đã chọn từng tùy chọn
-                optionSelectionCounts.put(
-                        playerAnswer.getSelectedOptionIds().getFirst(),
-                        optionSelectionCounts.get(playerAnswer.getSelectedOptionIds().getFirst()) + 1
-                );
+//                // Cập nhật số lượng người chơi đã chọn từng tùy chọn
+//                optionSelectionCounts.put(
+//                        playerAnswer.getSelectedOptionIds().getFirst(),
+//                        optionSelectionCounts.get(playerAnswer.getSelectedOptionIds().getFirst()) + 1
+//                );
 
-                QuestionResultDTO.UserAnswerDTO userAnswerDTO = new QuestionResultDTO.UserAnswerDTO();
-
+//                QuestionResultDTO.UserAnswerDTO userAnswerDTO = new QuestionResultDTO.UserAnswerDTO();
             }
         }
 

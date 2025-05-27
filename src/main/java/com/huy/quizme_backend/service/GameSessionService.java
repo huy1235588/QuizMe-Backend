@@ -6,14 +6,8 @@ import com.huy.quizme_backend.dto.game.GameStateDTO;
 import com.huy.quizme_backend.dto.game.LeaderboardDTO;
 import com.huy.quizme_backend.dto.game.QuestionGameDTO;
 import com.huy.quizme_backend.dto.game.QuestionResultDTO;
-import com.huy.quizme_backend.enity.GamePlayerAnswer;
-import com.huy.quizme_backend.enity.GameResult;
-import com.huy.quizme_backend.enity.Question;
-import com.huy.quizme_backend.enity.RoomParticipant;
-import com.huy.quizme_backend.repository.QuestionRepository;
-import com.huy.quizme_backend.repository.QuizRepository;
-import com.huy.quizme_backend.repository.RoomParticipantRepository;
-import com.huy.quizme_backend.repository.RoomRepository;
+import com.huy.quizme_backend.enity.*;
+import com.huy.quizme_backend.repository.*;
 import com.huy.quizme_backend.session.ConnectionStatus;
 import com.huy.quizme_backend.session.GameSession;
 import com.huy.quizme_backend.session.GameStatus;
@@ -47,6 +41,7 @@ public class GameSessionService {
     private final RoomParticipantRepository roomParticipantRepository;
     private final QuizRepository quizRepository;
     private final QuestionRepository questionRepository;
+    private final QuestionOptionRepository questionOptionRepository;
 
     // Lưu trữ trạng thái các phiên chơi in-memory
     private final ConcurrentMap<Long, GameSession> sessions = new ConcurrentHashMap<>();
@@ -170,10 +165,20 @@ public class GameSessionService {
             return false; // Đã trả lời rồi
         }
 
+        // Tạo GamePlayerAnswerOption
+        List<GamePlayerAnswerOption> selectedOptions = answerRequest.getSelectedOptions().stream()
+                .map(optionId -> {
+                    QuestionOption option = questionOptionRepository.findById(optionId).orElse(null);
+                    return GamePlayerAnswerOption.builder()
+                            .option(option)
+                            .build();
+                }).toList();
+
         // Tạo GamePlayerAnswer từ request
         GamePlayerAnswer playerAnswer = GamePlayerAnswer.builder()
                 .question(questionRepository.findById(answerRequest.getQuestionId()).orElse(null))
                 .answerTime(answerRequest.getAnswerTime())
+                .selectedOptions(selectedOptions)
                 .build();
 
         // Lưu các lựa chọn đã chọn (cần tạo GamePlayerAnswerOption entities)
@@ -202,7 +207,9 @@ public class GameSessionService {
         cancelCurrentTimer(gameSession);
 
         // Đặt trạng thái là kết thúc câu hỏi
-        gameSession.setStatus(GameStatus.QUESTION_END);        // Lấy câu hỏi hiện tại
+        gameSession.setStatus(GameStatus.QUESTION_END);
+
+        // Lấy câu hỏi hiện tại
         QuestionGameDTO currentQuestionDTO = gameSession.getQuestions().get(gameSession.getCurrentQuestionIndex());
         // Sử dụng findByIdWithOptions để eager load options và tránh lỗi lazy loading trong timer thread
         Question currentQuestionEntity = questionRepository.findByIdWithOptions(currentQuestionDTO.getQuestionId()).orElse(null);
@@ -216,24 +223,177 @@ public class GameSessionService {
         // Tính kết quả cho câu hỏi này
         QuestionResultDTO questionResult = gameProgressService.calculateResults(gameSession, currentQuestionEntity);
 
+        // Bắt đầu giai đoạn hiển thị kết quả (5 giây)
+        startShowingResults(roomId, questionResult);
+    }
+
+    /**
+     * Bắt đầu giai đoạn hiển thị kết quả câu hỏi (5 giây).
+     */
+    private void startShowingResults(Long roomId, QuestionResultDTO questionResult) {
+        GameSession gameSession = sessions.get(roomId);
+        if (gameSession == null) {
+            log.warn("Không tìm thấy phiên chơi {} để hiển thị kết quả", roomId);
+            return;
+        }
+
+        // Đặt trạng thái hiển thị kết quả
+        gameSession.setStatus(GameStatus.SHOWING_RESULTS);
+        gameSession.setStartTime(LocalDateTime.now());
+
         // Gửi kết quả câu hỏi đến tất cả người chơi
         webSocketService.sendQuestionResultEvent(roomId, questionResult);
+
+        log.info("Bắt đầu hiển thị kết quả câu hỏi trong 5 giây cho phòng {}", roomId);
+
+        // Hủy timer hiện tại nếu có
+        cancelCurrentTimer(gameSession);
+
+        // Bắt đầu timer hiển thị kết quả 5 giây
+        AtomicBoolean showingResultsActive = new AtomicBoolean(true);
+
+        ScheduledFuture<?> showResultsTask = timerExecutor.scheduleAtFixedRate(() -> {
+            if (!showingResultsActive.get()) {
+                return;
+            }
+
+            try {
+                GameSession session = sessions.get(roomId);
+                if (session == null || session.getStatus() != GameStatus.SHOWING_RESULTS) {
+                    showingResultsActive.set(false);
+                    return;
+                }
+
+                // Tính thời gian đã trôi qua kể từ khi bắt đầu hiển thị kết quả
+                long elapsedTime = Duration.between(session.getStartTime(), LocalDateTime.now()).getSeconds();
+                int remainingTime = Math.max(0, 5 - (int) elapsedTime);
+
+                log.debug("Hiển thị kết quả - Phòng {}: {} giây còn lại", roomId, remainingTime);
+
+                // Gửi timer event với countdown cho việc hiển thị kết quả
+                webSocketService.sendTimerEvent(roomId, remainingTime, 5);
+
+                if (remainingTime <= 0) {
+                    showingResultsActive.set(false);
+                    log.info("Kết thúc hiển thị kết quả, bắt đầu hiển thị bảng xếp hạng trong phòng {}", roomId);
+                    startShowingLeaderboard(roomId);
+                }
+
+            } catch (Exception e) {
+                log.error("Lỗi khi hiển thị kết quả cho phòng {}: {}", roomId, e.getMessage(), e);
+                showingResultsActive.set(false);
+            }
+        }, 0, 1, TimeUnit.SECONDS);
+
+        // Backup timer để đảm bảo chuyển sang hiển thị bảng xếp hạng
+        ScheduledFuture<?> backupTask = timerExecutor.schedule(() -> {
+            showingResultsActive.set(false);
+            if (!showResultsTask.isDone()) {
+                showResultsTask.cancel(true);
+            }
+            log.info("Backup timer kích hoạt cho hiển thị kết quả phòng {}", roomId);
+            startShowingLeaderboard(roomId);
+        }, 6, TimeUnit.SECONDS); // +1 giây buffer
+
+        // Lưu timer vào session
+        gameSession.setCurrentTimer(showResultsTask);
+        gameSession.setEndTimer(backupTask);
+    }
+
+    /**
+     * Bắt đầu giai đoạn hiển thị bảng xếp hạng (5 giây).
+     */
+    private void startShowingLeaderboard(Long roomId) {
+        GameSession gameSession = sessions.get(roomId);
+        if (gameSession == null) {
+            log.warn("Không tìm thấy phiên chơi {} để hiển thị bảng xếp hạng", roomId);
+            return;
+        }
+
+        // Đặt trạng thái hiển thị bảng xếp hạng
+        gameSession.setStatus(GameStatus.SHOWING_LEADERBOARD);
+        gameSession.setStartTime(LocalDateTime.now());
 
         // Tạo và gửi bảng xếp hạng cập nhật
         LeaderboardDTO leaderboard = gameProgressService.generateLeaderboardDTO(gameSession);
         webSocketService.sendLeaderboardEvent(roomId, leaderboard);
 
-        // Kiểm tra xem còn câu hỏi nào không
-        int nextQuestionIndex = gameSession.getCurrentQuestionIndex() + 1;
-        if (nextQuestionIndex >= gameSession.getQuestions().size()) {
-            // Hết câu hỏi, kết thúc game
-            log.info("Hết câu hỏi, kết thúc game trong phòng {}", roomId);
-            endGame(roomId);
-        } else {
-            // Bắt đầu đếm ngược cho câu hỏi tiếp theo
-            log.info("Bắt đầu đếm ngược 5 giây cho câu hỏi tiếp theo trong phòng {}", roomId);
-            startNextQuestionCountdown(roomId, 5); // 5 giây countdown
-        }
+        log.info("Bắt đầu hiển thị bảng xếp hạng trong 5 giây cho phòng {}", roomId);
+
+        // Hủy timer hiện tại nếu có
+        cancelCurrentTimer(gameSession);
+
+        // Bắt đầu timer hiển thị bảng xếp hạng 5 giây
+        AtomicBoolean showingLeaderboardActive = new AtomicBoolean(true);
+
+        ScheduledFuture<?> showLeaderboardTask = timerExecutor.scheduleAtFixedRate(() -> {
+            if (!showingLeaderboardActive.get()) {
+                return;
+            }
+
+            try {
+                GameSession session = sessions.get(roomId);
+                if (session == null || session.getStatus() != GameStatus.SHOWING_LEADERBOARD) {
+                    showingLeaderboardActive.set(false);
+                    return;
+                }
+
+                // Tính thời gian đã trôi qua kể từ khi bắt đầu hiển thị bảng xếp hạng
+                long elapsedTime = Duration.between(session.getStartTime(), LocalDateTime.now()).getSeconds();
+                int remainingTime = Math.max(0, 5 - (int) elapsedTime);
+
+                log.debug("Hiển thị bảng xếp hạng - Phòng {}: {} giây còn lại", roomId, remainingTime);
+
+                // Gửi timer event với countdown cho việc hiển thị bảng xếp hạng
+                webSocketService.sendTimerEvent(roomId, remainingTime, 5);
+
+                if (remainingTime <= 0) {
+                    showingLeaderboardActive.set(false);
+                    log.info("Kết thúc hiển thị bảng xếp hạng trong phòng {}", roomId);
+
+                    // Kiểm tra xem còn câu hỏi nào không
+                    int nextQuestionIndex = session.getCurrentQuestionIndex() + 1;
+                    if (nextQuestionIndex >= session.getQuestions().size()) {
+                        // Hết câu hỏi, kết thúc game
+                        log.info("Hết câu hỏi, kết thúc game trong phòng {}", roomId);
+                        endGame(roomId);
+                    } else {
+                        // Bắt đầu đếm ngược cho câu hỏi tiếp theo
+                        log.info("Bắt đầu đếm ngược 5 giây cho câu hỏi tiếp theo trong phòng {}", roomId);
+                        startNextQuestionCountdown(roomId, 5); // 5 giây countdown
+                    }
+                }
+
+            } catch (Exception e) {
+                log.error("Lỗi khi hiển thị bảng xếp hạng cho phòng {}: {}", roomId, e.getMessage(), e);
+                showingLeaderboardActive.set(false);
+            }
+        }, 0, 1, TimeUnit.SECONDS);
+
+        // Backup timer để đảm bảo chuyển sang câu hỏi tiếp theo
+        ScheduledFuture<?> backupTask = timerExecutor.schedule(() -> {
+            showingLeaderboardActive.set(false);
+            if (showLeaderboardTask != null && !showLeaderboardTask.isDone()) {
+                showLeaderboardTask.cancel(true);
+            }
+            log.info("Backup timer kích hoạt cho hiển thị bảng xếp hạng phòng {}", roomId);
+
+            // Kiểm tra xem còn câu hỏi nào không
+            int nextQuestionIndex = gameSession.getCurrentQuestionIndex() + 1;
+            if (nextQuestionIndex >= gameSession.getQuestions().size()) {
+                // Hết câu hỏi, kết thúc game
+                log.info("Hết câu hỏi, kết thúc game trong phòng {}", roomId);
+                endGame(roomId);
+            } else {
+                // Bắt đầu đếm ngược cho câu hỏi tiếp theo
+                log.info("Bắt đầu đếm ngược 5 giây cho câu hỏi tiếp theo trong phòng {}", roomId);
+                startNextQuestionCountdown(roomId, 5); // 5 giây countdown
+            }
+        }, 6, TimeUnit.SECONDS); // +1 giây buffer
+
+        // Lưu timer vào session
+        gameSession.setCurrentTimer(showLeaderboardTask);
+        gameSession.setEndTimer(backupTask);
     }
 
     /**
@@ -573,6 +733,8 @@ public class GameSessionService {
         // Kiểm tra trạng thái game
         return gameSession.getStatus() == GameStatus.IN_PROGRESS ||
                 gameSession.getStatus() == GameStatus.QUESTION_END ||
+                gameSession.getStatus() == GameStatus.SHOWING_RESULTS ||
+                gameSession.getStatus() == GameStatus.SHOWING_LEADERBOARD ||
                 gameSession.getStatus() == GameStatus.NEXT_QUESTION;
     }
 

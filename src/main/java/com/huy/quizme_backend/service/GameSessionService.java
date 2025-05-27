@@ -26,7 +26,9 @@ import jakarta.annotation.PreDestroy;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -354,14 +356,147 @@ public class GameSessionService {
      * Xử lý khi người chơi kết nối lại.
      */
     public GameStateDTO reconnectPlayer(Long roomId, Long userId, String sessionId) {
-        throw new UnsupportedOperationException("Chưa triển khai reconnectPlayer");
+        log.info("Player {} reconnecting to room {}", userId, roomId);
+
+        GameSession gameSession = sessions.get(roomId);
+        if (gameSession == null) {
+            log.warn("No game session found for room {} during reconnect", roomId);
+            return GameStateDTO.inactive();
+        }
+
+        ParticipantSession participant = gameSession.getParticipants().get(userId);
+        if (participant == null) {
+            log.warn("Player {} not found in game session for room {}", userId, roomId);
+            return GameStateDTO.inactive();
+        }
+
+        // Cập nhật trạng thái kết nối
+        participant.setConnectionStatus(ConnectionStatus.ACTIVE);
+        participant.setDisconnectedAt(null);
+
+        // Thêm sessionId mới vào danh sách sessions của participant
+        if (sessionId != null) {
+            participant.getSessionIds().add(sessionId);
+        }
+
+        log.info("Player {} successfully reconnected to room {}", userId, roomId);
+
+        // Trả về trạng thái game hiện tại
+        return getGameState(roomId);
     }
 
     /**
      * Xử lý khi người chơi mất kết nối.
      */
     public void disconnectPlayer(Long roomId, Long userId) {
-        throw new UnsupportedOperationException("Chưa triển khai disconnectPlayer");
+        log.info("Player {} disconnecting from room {}", userId, roomId);
+
+        GameSession gameSession = sessions.get(roomId);
+        if (gameSession == null) {
+            log.warn("No game session found for room {} during disconnect", roomId);
+            return;
+        }
+
+        ParticipantSession participant = gameSession.getParticipants().get(userId);
+        if (participant == null) {
+            log.warn("Player {} not found in game session for room {}", userId, roomId);
+            return;
+        }
+
+        // Cập nhật trạng thái kết nối
+        participant.setConnectionStatus(ConnectionStatus.DISCONNECTED);
+        participant.setDisconnectedAt(LocalDateTime.now());
+
+        // Xóa tất cả session IDs của player này
+        participant.getSessionIds().clear();
+
+        log.info("Player {} marked as disconnected in room {} at {}",
+                userId, roomId, participant.getDisconnectedAt());
+
+        // Gửi thông báo cho các player khác về việc disconnect
+        webSocketService.sendPlayerDisconnectEvent(roomId, userId, participant.getUsername());
+    }
+
+    /**
+     * Xử lý khi host mất kết nối - kết thúc game session
+     */
+    public void handleHostDisconnect(Long roomId, Long hostUserId) {
+        log.info("Host {} disconnecting from room {}, ending game session", hostUserId, roomId);
+
+        GameSession gameSession = sessions.get(roomId);
+        if (gameSession == null) {
+            log.debug("No game session found for room {} during host disconnect", roomId);
+            return;
+        }
+
+        // Kiểm tra xem host có trong phiên chơi không
+        ParticipantSession participant = gameSession.getParticipants().get(hostUserId);
+        if (participant == null) {
+            log.debug("Host {} not found in game session for room {}", hostUserId, roomId);
+            return;
+        }
+
+        // Đặt trạng thái host là ngắt kết nối
+        participant.setConnectionStatus(ConnectionStatus.DISCONNECTED);
+        participant.setDisconnectedAt(LocalDateTime.now());
+        participant.getSessionIds().clear();
+
+        // Gửi thông báo cho các player khác về việc host disconnect
+        log.info("Ending game session for room {} due to host disconnect", roomId);
+
+        // Hủy tất cả timer hiện tại
+        cancelCurrentTimer(gameSession);
+
+        // Cập nhật trạng thái game session
+        gameSession.setStatus(GameStatus.COMPLETED);
+        gameSession.setEndTime(LocalDateTime.now());
+
+        // Tạo dữ liệu kết thúc game
+        Map<String, Object> endGameData = new HashMap<>();
+        endGameData.put("reason", "HOST_DISCONNECTED");
+        endGameData.put("message", "Game ended because host disconnected");
+
+        webSocketService.sendGameEndEvent(roomId, endGameData);
+
+        log.info("Game session ended for room {} due to host disconnect", roomId);
+    }
+
+    /**
+     * Xử lý khi người chơi timeout (không kết nối lại trong thời gian quy định)
+     */
+    public void handlePlayerTimeout(Long roomId, Long userId) {
+        log.info("Player {} timed out from room {}", userId, roomId);
+
+        GameSession gameSession = sessions.get(roomId);
+        if (gameSession == null) {
+            log.debug("No game session found for room {} during player timeout", roomId);
+            return;
+        }
+
+        ParticipantSession participant = gameSession.getParticipants().get(userId);
+        if (participant == null) {
+            log.debug("Player {} not found in game session for room {}", userId, roomId);
+            return;
+        }
+
+        // Cập nhật trạng thái timeout
+        participant.setConnectionStatus(ConnectionStatus.TIMED_OUT);
+        participant.setDisconnectedAt(LocalDateTime.now());
+        participant.getSessionIds().clear();
+        log.info("Player {} marked as timed out in room {} at {}",
+                userId, roomId, participant.getDisconnectedAt());
+
+        // Gửi thông báo cho các player khác về việc timeout
+        webSocketService.sendPlayerTimeoutEvent(roomId, userId, participant.getUsername());
+
+        // Kiểm tra nếu không còn người chơi nào active thì kết thúc game
+        boolean hasActivePlayers = gameSession.getParticipants().values().stream()
+                .anyMatch(p -> p.getConnectionStatus() == ConnectionStatus.ACTIVE);
+
+        if (!hasActivePlayers && isGameActive(roomId)) {
+            log.info("No active players remaining in room {}, ending game", roomId);
+            endGame(roomId);
+        }
     }
 
     /**
@@ -555,5 +690,12 @@ public class GameSessionService {
             gameSession.getEndTimer().cancel(true);
             log.debug("Đã hủy backup timer cho phòng {}", gameSession.getRoomId());
         }
+    }
+
+    /**
+     * Phương thức lấy phiên chơi theo roomId.
+     */
+    public GameSession getGameSession(Long roomId) {
+        return sessions.get(roomId);
     }
 }

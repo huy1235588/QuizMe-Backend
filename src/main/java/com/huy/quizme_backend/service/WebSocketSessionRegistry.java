@@ -23,6 +23,7 @@ import org.springframework.beans.factory.annotation.Value;
 @Slf4j
 public class WebSocketSessionRegistry {
     private final RoomService roomService;
+    private final GameSessionService gameSessionService;
 
     // Thời gian chờ trước khi xử lý timeout (giây)
     @Value("${app.websocket.disconnect-timeout-seconds}")
@@ -64,8 +65,36 @@ public class WebSocketSessionRegistry {
         // Nếu đã có task timeout cho session này, hủy nó
         cancelDisconnectTimeout(sessionId);
 
+        // Check if this is a reconnection for an existing user
+        boolean isReconnection = false;
+        if (userId != null) {
+            // Check if user was already connected in any room
+            for (SessionInfo existingInfo : sessions.values()) {
+                if (existingInfo.userId != null && existingInfo.userId.equals(userId)) {
+                    isReconnection = true;
+                    break;
+                }
+            }
+        }
+
         // Đăng ký session
-        sessions.putIfAbsent(sessionId, new SessionInfo(sessionId, userId, guestName));
+        SessionInfo sessionInfo = sessions.putIfAbsent(sessionId, new SessionInfo(sessionId, userId, guestName));
+
+        // If this is a reconnection, handle it in game sessions
+        if (isReconnection && userId != null) {
+            SessionInfo info = sessions.get(sessionId);
+            if (info != null) {
+                for (Long roomId : info.roomIds) {
+                    try {
+                        gameSessionService.reconnectPlayer(roomId, userId, sessionId);
+                        log.info("Player {} reconnected to room {}", userId, roomId);
+                    } catch (Exception e) {
+                        log.error("Error handling game session reconnection for user {} in room {}",
+                                userId, roomId, e);
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -87,6 +116,19 @@ public class WebSocketSessionRegistry {
         SessionInfo info = sessions.get(sessionId);
         if (info != null) {
             info.lastDisconnectTime = Instant.now();
+
+            // Lập tức hủy task timeout nếu có
+            if (info.userId != null) {
+                for (Long roomId : info.roomIds) {
+                    try {
+                        // Ghi cập nhật trạng thái ngắt kết nối trong game session
+                        gameSessionService.disconnectPlayer(roomId, info.userId);
+                    } catch (Exception e) {
+                        log.error("Error updating game session disconnect for user {} in room {}",
+                                info.userId, roomId, e);
+                    }
+                }
+            }
 
             // Lên lịch task để xử lý sau khoảng thời gian timeout
             scheduleDisconnectTimeout(sessionId);
@@ -129,6 +171,16 @@ public class WebSocketSessionRegistry {
                     // Nếu là người dùng đăng nhập
                     if (info.userId != null) {
                         log.info("User {} timed out from room {}", info.userId, roomId);
+
+                        // Xử lý timeout trong game session
+                        try {
+                            gameSessionService.handlePlayerTimeout(roomId, info.userId);
+                        } catch (Exception e) {
+                            log.error("Error handling game session timeout for user {} in room {}",
+                                    info.userId, roomId, e);
+                        }
+
+                        // Xử lý ngắt kết nối người dùng khỏi phòng
                         roomService.handleUserDisconnectTimeout(roomId, info.userId);
                     }
                     // Nếu là khách

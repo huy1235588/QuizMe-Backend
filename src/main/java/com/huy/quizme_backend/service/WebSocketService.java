@@ -119,6 +119,38 @@ public class WebSocketService {
     }
 
     /**
+     * Gửi sự kiện người chơi mất kết nối
+     */
+    public void sendPlayerDisconnectEvent(Long roomId, Long userId, String username) {
+        Assert.notNull(roomId, "RoomId không được null");
+        Assert.notNull(userId, "UserId không được null");
+
+        Map<String, Object> disconnectData = new HashMap<>();
+        disconnectData.put("userId", userId);
+        disconnectData.put("username", username);
+        disconnectData.put("message", "Player " + username + " has disconnected");
+
+        String destination = buildDestination(roomId, "/player-disconnect");
+        sendMessage(destination, "PLAYER_DISCONNECT", disconnectData);
+    }
+
+    /**
+     * Gửi sự kiện người chơi timeout
+     */
+    public void sendPlayerTimeoutEvent(Long roomId, Long userId, String username) {
+        Assert.notNull(roomId, "RoomId không được null");
+        Assert.notNull(userId, "UserId không được null");
+
+        Map<String, Object> timeoutData = new HashMap<>();
+        timeoutData.put("userId", userId);
+        timeoutData.put("username", username);
+        timeoutData.put("message", "Player " + username + " has timed out");
+
+        String destination = buildDestination(roomId, "/player-timeout");
+        sendMessage(destination, "PLAYER_TIMEOUT", timeoutData);
+    }
+
+    /**
      * Gửi sự kiện cập nhật tiến trình trò chơi
      */
     public <T> void sendGameProgressEvent(Long roomId, T payload) {

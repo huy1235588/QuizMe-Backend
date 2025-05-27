@@ -39,5 +39,6 @@ src/main/resources/application.yml
 .env
 .env.*
 /uploads
+/backup/
 /src/main/resources/sql/quizme_db.sql
 src/main/resources/sql/merged_sql.sql

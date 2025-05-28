@@ -5,9 +5,11 @@ import com.huy.quizme_backend.dto.request.RegisterRequest;
 import com.huy.quizme_backend.dto.response.AuthResponse;
 import com.huy.quizme_backend.dto.response.UserResponse;
 import com.huy.quizme_backend.enity.RefreshToken;
+import com.huy.quizme_backend.enity.UserProfile;
 import com.huy.quizme_backend.enity.enums.Role;
 import com.huy.quizme_backend.enity.User;
 import com.huy.quizme_backend.repository.RefreshTokenRepository;
+import com.huy.quizme_backend.repository.UserProfileRepository;
 import com.huy.quizme_backend.repository.UserRepository;
 import com.huy.quizme_backend.security.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
@@ -28,10 +30,27 @@ import java.time.Instant;
 public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
+    private final UserProfileRepository userProfileRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider tokenProvider;
     private final LocalStorageService localStorageService;
+
+    // Tạo JWT access token và refresh token
+    private AuthTokens createTokens(Authentication authentication) {
+        // Tạo JWT access token
+        String accessToken = tokenProvider.generateAccessToken(authentication);
+        // Lấy ngày hết hạn của access token
+        Instant accessExpiry = tokenProvider.getExpirationDateFromJWT(accessToken);
+        // Tạo JWT refresh token
+        String refreshToken = tokenProvider.generateRefreshToken(authentication);
+        // Lấy ngày hết hạn của refresh token
+        Instant refreshExpiry = tokenProvider.getExpirationDateFromJWT(refreshToken);
+        // Lấy JTI từ refresh token
+        String jti = tokenProvider.getJtiFromJWT(refreshToken);
+
+        return new AuthTokens(accessToken, accessExpiry, refreshToken, refreshExpiry, jti);
+    }
 
     // Phương thức đăng nhập
     @Transactional
@@ -50,25 +69,16 @@ public class AuthService {
         // Lấy thông tin người dùng từ Authentication
         User user = (User) authentication.getPrincipal();
 
-        // Tạo JWT access token
-        String accessToken = tokenProvider.generateAccessToken(authentication);
-        // Lấy ngày hết hạn của access token
-        Instant accessExpiry = tokenProvider.getExpirationDateFromJWT(accessToken);
-        // Tạo JWT refresh token
-        String refreshToken = tokenProvider.generateRefreshToken(authentication);
-        // Lấy ngày hết hạn của refresh token
-        Instant refreshExpiry = tokenProvider.getExpirationDateFromJWT(refreshToken);
-
-        // Lấy JTI từ refresh token
-        String jti = tokenProvider.getJtiFromJWT(refreshToken);
+        // Tạo tokens
+        AuthTokens tokens = createTokens(authentication);
 
         // Lưu refresh token vào cơ sở dữ liệu
         RefreshToken refreshTokenEntity = RefreshToken.builder()
                 .user(user)
-                .token(refreshToken)
-                .jti(jti)
+                .token(tokens.getRefreshToken())
+                .jti(tokens.getJti())
                 .issuedAt(Instant.now())
-                .expiresAt(refreshExpiry)
+                .expiresAt(tokens.getRefreshExpiry())
                 .revoked(false)
                 .build();
 
@@ -80,16 +90,17 @@ public class AuthService {
 
         // Trả về token với chuyển đổi Cloudinary URL cho ảnh đại diện
         return new AuthResponse(
-                accessToken,
-                accessExpiry,
-                refreshToken,
-                refreshExpiry,
+                tokens.getAccessToken(),
+                tokens.getAccessExpiry(),
+                tokens.getRefreshToken(),
+                tokens.getRefreshExpiry(),
                 UserResponse.fromUser(user, localStorageService)
         );
     }
 
     // Phương thức đăng ký
-    public UserResponse register(RegisterRequest registerRequest) {
+    @Transactional
+    public AuthResponse register(RegisterRequest registerRequest) {
         // Kiểm tra xem người dùng đã tồn tại chưa
         if (userRepository.existsByUsername(registerRequest.getUsername())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Username already exists");
@@ -115,8 +126,45 @@ public class AuthService {
                 .isActive(true) // Gán trạng thái hoạt động mặc định là true
                 .build();
 
-        // Trả về người dùng đã lưu vào cơ sở dữ liệu với chuyển đổi Cloudinary URL
-        return UserResponse.fromUser(userRepository.save(user), localStorageService);
+        // Lưu người dùng trước
+        user = userRepository.save(user);
+
+        // Tạo và lưu hồ sơ người dùng mới
+        UserProfile userProfile = UserProfile.builder()
+                .user(user)
+                .build();
+        userProfileRepository.save(userProfile);
+
+        // Tạo authentication object để tạo token
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                user,
+                null,
+                user.getAuthorities()
+        );
+
+        // Tạo tokens
+        AuthTokens tokens = createTokens(authentication);
+
+        // Lưu refresh token vào cơ sở dữ liệu
+        RefreshToken refreshTokenEntity = RefreshToken.builder()
+                .user(user)
+                .token(tokens.getRefreshToken())
+                .jti(tokens.getJti())
+                .issuedAt(Instant.now())
+                .expiresAt(tokens.getRefreshExpiry())
+                .revoked(false)
+                .build();
+
+        refreshTokenRepository.save(refreshTokenEntity);
+
+        // Trả về token với chuyển đổi Cloudinary URL cho ảnh đại diện
+        return new AuthResponse(
+                tokens.getAccessToken(),
+                tokens.getAccessExpiry(),
+                tokens.getRefreshToken(),
+                tokens.getRefreshExpiry(),
+                UserResponse.fromUser(user, localStorageService)
+        );
     }
 
     // Phương thức đăng xuất
@@ -154,3 +202,41 @@ public class AuthService {
         );
     }
 }
+
+// Class để chứa thông tin token
+class AuthTokens {
+    private final String accessToken;
+    private final Instant accessExpiry;
+    private final String refreshToken;
+    private final Instant refreshExpiry;
+    private final String jti;
+
+    public AuthTokens(String accessToken, Instant accessExpiry, String refreshToken, Instant refreshExpiry, String jti) {
+        this.accessToken = accessToken;
+        this.accessExpiry = accessExpiry;
+        this.refreshToken = refreshToken;
+        this.refreshExpiry = refreshExpiry;
+        this.jti = jti;
+    }
+
+    public String getAccessToken() {
+        return accessToken;
+    }
+
+    public Instant getAccessExpiry() {
+        return accessExpiry;
+    }
+
+    public String getRefreshToken() {
+        return refreshToken;
+    }
+
+    public Instant getRefreshExpiry() {
+        return refreshExpiry;
+    }
+
+    public String getJti() {
+        return jti;
+    }
+}
+

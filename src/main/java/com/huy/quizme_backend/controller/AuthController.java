@@ -36,15 +36,15 @@ public class AuthController {
     // Phương thức đăng ký
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<UserResponse> register(
+    public ApiResponse<AuthResponse> register(
             @Valid @RequestBody RegisterRequest registerRequest
     ) {
-        // Tạo mới user dựa trên thông tin đăng ký
-        UserResponse registeredUser = authService.register(registerRequest);
+        // Tạo mới user dựa trên thông tin đăng ký và trả về token
+        AuthResponse authResponse = authService.register(registerRequest);
 
         // Trả về phản hồi
         return ApiResponse.created(
-                registeredUser,
+                authResponse,
                 "User registered successfully"
         );
     }

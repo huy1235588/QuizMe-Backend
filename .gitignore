@@ -42,3 +42,4 @@ src/main/resources/application.yml
 /backup/
 /src/main/resources/sql/quizme_db.sql
 src/main/resources/sql/merged_sql.sql
+*txt

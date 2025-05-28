@@ -1,22 +1,19 @@
 package com.huy.quizme_backend.util;
-
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Arrays;
-import java.util.List;
-
-/**
- * Utility class để xử lý validation file upload
+import java.util.List;/** * Utility class đ xử lý validation file upload
  */
 public class FileValidationUtil {
 
     // Các định dạng ảnh được phép
     private static final List<String> ALLOWED_IMAGE_TYPES = Arrays.asList(
-            "image/jpeg",
-            "image/jpg",
-            "image/png",
-            "image/gif",
-            "image/webp"
+            "jpeg",
+            "jpg",
+            "png",
+            "gif",
+            "webp"
     );
 
     // Kích thước file tối đa (5MB)
@@ -64,7 +61,7 @@ public class FileValidationUtil {
             return "File is required";
         }
 
-        String contentType = file.getContentType();
+        String contentType = StringUtils.getFilenameExtension(file.getOriginalFilename());
         if (contentType == null || !ALLOWED_IMAGE_TYPES.contains(contentType.toLowerCase())) {
             return "Only image files (JPEG, PNG, GIF, WebP) are allowed";
         }

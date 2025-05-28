@@ -100,6 +100,63 @@ public class QuestionService {
     }
 
     /**
+     * Tạo danh sách câu hỏi mới
+     *
+     * @param questionRequests Danh sách các câu hỏi cần tạo
+     * @return Danh sách các QuestionResponse của các câu hỏi đã tạo
+     */
+    @Transactional
+    public List<QuestionResponse> createQuestions(List<QuestionRequest> questionRequests) {
+        if (questionRequests.isEmpty()) {
+            return List.of();
+        }
+
+        // Lấy quiz ID từ câu hỏi đầu tiên
+        Long quizId = questionRequests.get(0).getQuizId();
+        Quiz quiz = findQuizById(quizId);
+
+        // Tạo danh sách câu hỏi từ yêu cầu
+        List<Question> questions = questionRequests.stream()
+                .map(request -> {
+                    if (request.getOrderNumber() == null) {
+                        request.setOrderNumber(getNextOrderNumber(quizId));
+                    }
+                    return buildQuestionFromRequest(request, quiz);
+                })
+                .collect(Collectors.toList());
+
+        // Lưu tất cả câu hỏi vào cơ sở dữ liệu
+        List<Question> savedQuestions = questionRepository.saveAll(questions);
+
+        // Xử lý upload file hình ảnh và âm thanh cho từng câu hỏi
+        for (int i = 0; i < savedQuestions.size(); i++) {
+            Question question = savedQuestions.get(i);
+            MultipartFile imageFile = questionRequests.get(i).getImageFile();
+            MultipartFile audioFile = questionRequests.get(i).getAudioFile();
+            handleMediaUploads(question, imageFile, audioFile);
+        }
+
+        // Cập nhật số lượng câu hỏi trong quiz
+        updateQuizQuestionCount(quiz, savedQuestions.size());
+
+        // Mapping các câu hỏi với các lựa chọn của chúng
+        Map<Question, List<QuestionRequest.QuestionOptionRequest>> questionOptionsMap =
+                questionRequests.stream()
+                        .collect(Collectors.toMap(
+                                request -> buildQuestionFromRequest(request, quiz),
+                                QuestionRequest::getOptions
+                        ));
+
+        // Tạo các lựa chọn cho từng câu hỏi
+        for (Question question : savedQuestions) {
+            List<QuestionRequest.QuestionOptionRequest> options = questionOptionsMap.get(question);
+            questionOptionService.createOptionsForQuestion(question, options);
+        }
+
+        return convertQuestionsToResponses(savedQuestions);
+    }
+
+    /**
      * Cập nhật thông tin câu hỏi
      *
      * @param id              ID của câu hỏi cần cập nhật
@@ -150,13 +207,13 @@ public class QuestionService {
 
         // Giảm số lượng câu hỏi trong quiz
         updateQuizQuestionCount(question.getQuiz(), -1);
-        
+
         // Xóa các file media
         deleteQuestionMedia(question);
-        
+
         // Xóa các lựa chọn
         questionOptionService.deleteAllOptionsForQuestion(id);
-        
+
         // Xóa câu hỏi
         questionRepository.deleteById(id);
     }
@@ -165,7 +222,7 @@ public class QuestionService {
 
     /**
      * Chuyển đổi danh sách câu hỏi thành danh sách QuestionResponse
-     * 
+     *
      * @param questions Danh sách câu hỏi cần chuyển đổi
      * @return Danh sách QuestionResponse
      */
@@ -181,7 +238,7 @@ public class QuestionService {
 
         // Lấy tất cả các lựa chọn cho các câu hỏi
         List<QuestionOption> allOptions = questionOptionService.getOptionsByQuestionIds(questionIds);
-        
+
         // Nhóm các lựa chọn theo ID câu hỏi
         Map<Long, List<QuestionOption>> optionsByQuestionId = questionOptionService.groupOptionsByQuestionId(allOptions);
 
@@ -196,7 +253,7 @@ public class QuestionService {
 
     /**
      * Tìm câu hỏi theo ID
-     * 
+     *
      * @param id ID của câu hỏi
      * @return Đối tượng Question
      * @throws ResponseStatusException nếu không tìm thấy câu hỏi
@@ -209,7 +266,7 @@ public class QuestionService {
 
     /**
      * Tìm quiz theo ID
-     * 
+     *
      * @param id ID của quiz
      * @return Đối tượng Quiz
      * @throws ResponseStatusException nếu không tìm thấy quiz
@@ -222,7 +279,7 @@ public class QuestionService {
 
     /**
      * Lấy số thứ tự tiếp theo cho câu hỏi mới trong quiz
-     * 
+     *
      * @param quizId ID của quiz
      * @return Số thứ tự tiếp theo
      */
@@ -237,9 +294,9 @@ public class QuestionService {
 
     /**
      * Xây dựng đối tượng Question từ QuestionRequest
-     * 
+     *
      * @param request Thông tin yêu cầu
-     * @param quiz Quiz chứa câu hỏi
+     * @param quiz    Quiz chứa câu hỏi
      * @return Đối tượng Question đã xây dựng
      */
     private Question buildQuestionFromRequest(QuestionRequest request, Quiz quiz) {
@@ -254,9 +311,9 @@ public class QuestionService {
 
     /**
      * Cập nhật các trường thông tin của câu hỏi
-     * 
+     *
      * @param question Câu hỏi cần cập nhật
-     * @param request Thông tin yêu cầu cập nhật
+     * @param request  Thông tin yêu cầu cập nhật
      */
     private void updateQuestionFields(Question question, QuestionRequest request) {
         question.setContent(request.getContent());
@@ -270,8 +327,8 @@ public class QuestionService {
 
     /**
      * Cập nhật số lượng câu hỏi trong quiz
-     * 
-     * @param quiz Quiz cần cập nhật
+     *
+     * @param quiz  Quiz cần cập nhật
      * @param delta Giá trị thay đổi (tăng hoặc giảm)
      */
     private void updateQuizQuestionCount(Quiz quiz, int delta) {
@@ -281,8 +338,8 @@ public class QuestionService {
 
     /**
      * Xử lý tải lên file media cho câu hỏi mới
-     * 
-     * @param question Câu hỏi
+     *
+     * @param question  Câu hỏi
      * @param imageFile File hình ảnh
      * @param audioFile File âm thanh
      */
@@ -306,10 +363,10 @@ public class QuestionService {
 
     /**
      * Xử lý cập nhật file media cho câu hỏi đã tồn tại
-     * 
-     * @param question Câu hỏi
-     * @param imageFile File hình ảnh mới
-     * @param audioFile File âm thanh mới
+     *
+     * @param question    Câu hỏi
+     * @param imageFile   File hình ảnh mới
+     * @param audioFile   File âm thanh mới
      * @param oldImageUrl URL hình ảnh cũ
      * @param oldAudioUrl URL âm thanh cũ
      */
@@ -342,7 +399,7 @@ public class QuestionService {
 
     /**
      * Xóa các file media của câu hỏi
-     * 
+     *
      * @param question Câu hỏi cần xóa media
      */
     private void deleteQuestionMedia(Question question) {

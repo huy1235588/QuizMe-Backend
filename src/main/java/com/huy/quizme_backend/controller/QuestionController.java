@@ -68,7 +68,20 @@ public class QuestionController {
         QuestionResponse createdQuestion = questionService.createQuestion(questionRequest);
         return ApiResponse.created(createdQuestion, "Question created successfully");
     }
-    
+
+    /**
+     * API tạo danh sách câu hỏi mới
+     * @param questionRequests Danh sách các câu hỏi cần tạo
+     * @return Danh sách các QuestionResponse của các câu hỏi đã tạo
+     */
+    @PostMapping(value = "/batch", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<List<QuestionResponse>> createQuestions(
+            @ModelAttribute @Valid List<QuestionRequest> questionRequests) {
+        List<QuestionResponse> createdQuestions = questionService.createQuestions(questionRequests);
+        return ApiResponse.created(createdQuestions, "Questions created successfully");
+    }
+
     /**
      * API cập nhật thông tin câu hỏi
      * @param id ID của câu hỏi cần cập nhật

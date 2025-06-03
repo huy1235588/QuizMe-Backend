@@ -16,4 +16,6 @@ public interface QuestionOptionRepository extends JpaRepository<QuestionOption, 
 
     // Find correct options for a question
     List<QuestionOption> findByQuestionIdAndIsCorrect(Long questionId, Boolean isCorrect);
+
+    void deleteByQuestionId(Long questionId);
 }

@@ -154,7 +154,9 @@ public class QuizService {
                 .totalPages(quizPage.getTotalPages())
                 .last(quizPage.isLast())
                 .build();
-    }    /**
+    }
+
+    /**
      * Tạo mới quiz
      *
      * @param quizRequest Thông tin quiz cần tạo
@@ -234,10 +236,10 @@ public class QuizService {
      */
     private void createQuestionsForQuiz(Quiz quiz, List<QuizRequest.QuizQuestionRequest> questions) {
         List<Question> createdQuestions = new ArrayList<>();
-        
+
         for (int i = 0; i < questions.size(); i++) {
             QuizRequest.QuizQuestionRequest questionRequest = questions.get(i);
-            
+
             // Tạo câu hỏi
             Question question = Question.builder()
                     .quiz(quiz)
@@ -250,16 +252,16 @@ public class QuizService {
 
             // Lưu câu hỏi
             Question savedQuestion = questionRepository.save(question);
-            
+
             // Xử lý upload file ảnh/âm thanh nếu có
             handleQuestionMediaUploads(savedQuestion, questionRequest);
-            
+
             // Tạo các lựa chọn cho câu hỏi
             createOptionsForQuestion(savedQuestion, questionRequest.getOptions());
-            
+
             createdQuestions.add(savedQuestion);
         }
-        
+
         // Cập nhật số lượng câu hỏi trong quiz
         quiz.setQuestionCount(createdQuestions.size());
         quizRepository.save(quiz);
@@ -273,7 +275,7 @@ public class QuizService {
      */
     private void handleQuestionMediaUploads(Question question, QuizRequest.QuizQuestionRequest questionRequest) {
         boolean needUpdate = false;
-        
+
         // Upload file ảnh nếu có
         if (questionRequest.getImageFile() != null && !questionRequest.getImageFile().isEmpty()) {
             String imageUrl = localStorageService.uploadQuestionImage(
@@ -284,7 +286,7 @@ public class QuizService {
             question.setImageUrl(imageUrl);
             needUpdate = true;
         }
-        
+
         // Upload file âm thanh nếu có
         if (questionRequest.getAudioFile() != null && !questionRequest.getAudioFile().isEmpty()) {
             String audioUrl = localStorageService.uploadQuestionAudio(
@@ -295,7 +297,7 @@ public class QuizService {
             question.setAudioUrl(audioUrl);
             needUpdate = true;
         }
-        
+
         // Lưu lại câu hỏi nếu có cập nhật media
         if (needUpdate) {
             questionRepository.save(question);
@@ -310,17 +312,17 @@ public class QuizService {
      */
     private void createOptionsForQuestion(Question question, List<QuizRequest.QuizQuestionRequest.QuestionOptionRequest> options) {
         List<QuestionOption> questionOptions = new ArrayList<>();
-        
+
         for (QuizRequest.QuizQuestionRequest.QuestionOptionRequest optionRequest : options) {
             QuestionOption option = QuestionOption.builder()
                     .question(question)
                     .content(optionRequest.getContent())
                     .isCorrect(optionRequest.getIsCorrect())
                     .build();
-            
+
             questionOptions.add(option);
         }
-        
+
         // Lưu tất cả lựa chọn
         questionOptionRepository.saveAll(questionOptions);
     }
@@ -402,7 +404,9 @@ public class QuizService {
             if (oldThumbnailUrl != null && !oldThumbnailUrl.isEmpty()) {
                 localStorageService.deleteQuizThumbnail(oldThumbnailUrl);
             }
-        }        // Cập nhật thông tin quiz
+        }
+
+        // Cập nhật thông tin quiz
         quiz.setTitle(quizRequest.getTitle());
         quiz.setDescription(quizRequest.getDescription());
         quiz.setDifficulty(quizRequest.getDifficulty());
@@ -430,7 +434,7 @@ public class QuizService {
     private void updateQuestionsForQuiz(Quiz quiz, List<QuizRequest.QuizQuestionRequest> questions) {
         // Xóa tất cả câu hỏi cũ và media files
         deleteAllQuestionsAndMedia(quiz);
-        
+
         // Tạo lại câu hỏi từ danh sách mới
         if (!questions.isEmpty()) {
             createQuestionsForQuiz(quiz, questions);
@@ -449,15 +453,15 @@ public class QuizService {
     private void deleteAllQuestionsAndMedia(Quiz quiz) {
         // Lấy tất cả câu hỏi của quiz
         List<Question> questions = questionRepository.findByQuizIdOrderByOrderNumber(quiz.getId());
-        
+
         for (Question question : questions) {
             // Xóa các file media của câu hỏi
             deleteQuestionMediaFiles(question);
-            
+
             // Xóa tất cả options của câu hỏi (cascade delete sẽ xử lý)
-            // questionOptionRepository.deleteByQuestionId(question.getId());
+            questionOptionRepository.deleteByQuestionId(question.getId());
         }
-        
+
         // Xóa tất cả câu hỏi của quiz (cascade delete sẽ xóa options)
         questionRepository.deleteByQuizId(quiz.getId());
     }
@@ -472,7 +476,7 @@ public class QuizService {
         if (question.getImageUrl() != null && !question.getImageUrl().isEmpty()) {
             localStorageService.deleteQuestionImage(question.getImageUrl());
         }
-        
+
         // Xóa file âm thanh nếu có
         if (question.getAudioUrl() != null && !question.getAudioUrl().isEmpty()) {
             localStorageService.deleteQuestionAudio(question.getAudioUrl());
@@ -500,7 +504,9 @@ public class QuizService {
         if (!quiz.getCreator().getId().equals(currentUserId) && currentUser.getRole() != Role.ADMIN) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN, "You don't have permission to delete this quiz");
-        }        // Cập nhật số lượng quiz trong các categories
+        }
+
+        // Cập nhật số lượng quiz trong các categories
         if (quiz.getCategories() != null) {
             for (Category category : quiz.getCategories()) {
                 category.setQuizCount(category.getQuizCount() - 1);

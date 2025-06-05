@@ -1,9 +1,11 @@
 package com.huy.quizme_backend.service;
 
+import com.huy.quizme_backend.dto.request.UserRequest;
 import com.huy.quizme_backend.dto.response.PageResponse;
 import com.huy.quizme_backend.dto.response.UserProfileResponse;
 import com.huy.quizme_backend.dto.response.UserResponse;
 import com.huy.quizme_backend.enity.User;
+import com.huy.quizme_backend.enity.enums.Role;
 import com.huy.quizme_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -11,6 +13,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.multipart.MultipartFile;
@@ -25,6 +28,7 @@ import java.util.stream.Collectors;
 public class UserService {
     private final UserRepository userRepository;
     private final LocalStorageService localStorageService;
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * Lấy thông tin người dùng theo ID
@@ -234,5 +238,64 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Failed to remove avatar: " + e.getMessage());
         }
+    }
+
+    /**
+     * Thêm một người dùng mới vào hệ thống
+     *
+     * @param userRequest Thông tin người dùng mới
+     * @return Thông tin người dùng đã được thêm
+     */
+    @Transactional
+    public UserResponse addUser(
+            UserRequest userRequest
+    ) {
+        if (userRequest == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User information is required");
+        }
+
+        // Kiểm tra xem người dùng đã tồn tại chưa
+        if (userRepository.existsByUsername(userRequest.getUsername())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Username already exists");
+        }
+
+        // Kiểm tra xem email đã tồn tại chưa
+        if (userRepository.existsByEmail(userRequest.getEmail())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already exists");
+        }
+
+        // Tạo người dùng mới
+        User user = User.builder()
+                .username(userRequest.getUsername())
+                .email(userRequest.getEmail())
+                .password(passwordEncoder.encode(userRequest.getPassword()))
+                .fullName(userRequest.getFullName())
+                .role(userRequest.getRole())
+                .isActive(userRequest.isActive()) // Gán trạng thái hoạt động
+                .build();
+
+        MultipartFile avatarFile = userRequest.getProfileImage();
+
+        // Thêm ảnh đại diện nếu có
+        if (avatarFile != null && !avatarFile.isEmpty()) {
+            // Validate file using utility
+            String validationError = FileValidationUtil.getImageValidationError(avatarFile);
+            if (validationError != null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, validationError);
+            }
+
+            // Upload ảnh đại diện
+            String avatarFilename = localStorageService.uploadProfileImage(avatarFile, user.getId());
+            if (avatarFilename == null) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to upload avatar");
+            }
+            user.setProfileImage(avatarFilename);
+        }
+
+        // Lưu người dùng mới
+        User savedUser = userRepository.save(user);
+
+        // Trả về thông tin người dùng đã lưu
+        return UserResponse.fromUser(savedUser, localStorageService);
     }
 }

@@ -1,22 +1,19 @@
 package com.huy.quizme_backend.controller;
 
+import com.huy.quizme_backend.dto.request.UserRequest;
 import com.huy.quizme_backend.dto.response.ApiResponse;
 import com.huy.quizme_backend.dto.response.PageResponse;
 import com.huy.quizme_backend.dto.response.UserProfileResponse;
 import com.huy.quizme_backend.dto.response.UserResponse;
 import com.huy.quizme_backend.enity.User;
+import com.huy.quizme_backend.enity.enums.Role;
 import com.huy.quizme_backend.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -128,8 +125,7 @@ public class UserController {
     /**
      * API upload avatar cho người dùng hiện tại
      *
-     * @param avatarFile File ảnh avatar
-     * @param principal  Thông tin người dùng đăng nhập hiện tại
+     * @param principal Thông tin người dùng đăng nhập hiện tại
      * @return Thông tin người dùng đã cập nhật
      */
     @PostMapping("/avatar/upload")
@@ -165,5 +161,28 @@ public class UserController {
         UserResponse updatedUser = userService.removeAvatar(currentUser);
 
         return ApiResponse.success(updatedUser, "Avatar removed successfully");
+    }
+
+    /**
+     * API thêm người dùng mới (chỉ dành cho quản trị viên)
+     *
+     * @param currentUser Người dùng hiện tại (quản trị viên)
+     * @param userRequest Thông tin người dùng mới
+     * @return Thông tin người dùng đã thêm
+     */
+    @PostMapping("/create")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<UserResponse> addUser(
+            @AuthenticationPrincipal User currentUser,
+            @Valid @RequestBody UserRequest userRequest
+    ) {
+        // Kiểm tra quyền của người dùng hiện tại
+        if (currentUser == null || !currentUser.getRole().equals(Role.ADMIN)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to add users");
+        }
+
+        // Thêm người dùng mới
+        UserResponse newUser = userService.addUser(userRequest);
+        return ApiResponse.success(newUser, "User added successfully");
     }
 }

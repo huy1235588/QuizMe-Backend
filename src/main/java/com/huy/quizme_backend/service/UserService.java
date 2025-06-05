@@ -297,4 +297,76 @@ public class UserService {
         // Trả về thông tin người dùng đã lưu
         return UserResponse.fromUser(savedUser, localStorageService);
     }
+
+    /**
+     * Cập nhật thông tin người dùng
+     *
+     * @param userId      ID của người dùng cần cập nhật
+     * @param userRequest Thông tin mới của người dùng
+     * @return Thông tin người dùng đã cập nhật
+     */
+    @Transactional
+    public UserResponse updateUser(Long userId, UserRequest userRequest) {
+        if (userRequest == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User information is required");
+        }
+
+        // Tìm người dùng theo ID
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found with id: " + userId));
+
+        // Cập nhật thông tin người dùng
+        user.setUsername(userRequest.getUsername());
+        user.setEmail(userRequest.getEmail());
+        user.setFullName(userRequest.getFullName());
+        user.setRole(userRequest.getRole());
+        user.setActive(userRequest.isActive());
+
+        // Mã hóa mật khẩu nếu có thay đổi
+        if (userRequest.getPassword() != null && !userRequest.getPassword().isEmpty()) {
+            user.setPassword(passwordEncoder.encode(userRequest.getPassword()));
+        }
+
+        // Lưu người dùng đã cập nhật
+        User savedUser = userRepository.save(user);
+
+        // Thêm ảnh đại diện nếu có
+        MultipartFile avatarFile = userRequest.getProfileImage();
+        if (avatarFile != null && !avatarFile.isEmpty()) {
+            // Validate file using utility
+            String validationError = FileValidationUtil.getImageValidationError(avatarFile);
+            if (validationError != null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, validationError);
+            }
+
+            // Upload ảnh đại diện
+            String avatarFilename = localStorageService.uploadProfileImage(avatarFile, savedUser.getId());
+            if (avatarFilename == null) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to upload avatar");
+            }
+            savedUser.setProfileImage(avatarFilename);
+        }
+
+        // Trả về thông tin người dùng đã cập nhật
+        return UserResponse.fromUser(savedUser, localStorageService);
+    }
+
+    /**
+     * Xóa người dùng theo ID
+     *
+     * @param userId ID của người dùng cần xóa
+     */
+    @Transactional
+    public void deleteUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found with id: " + userId));
+
+        // Xóa ảnh đại diện nếu có
+        if (user.getProfileImage() != null && !user.getProfileImage().isEmpty()) {
+            localStorageService.deleteProfileImage(user.getProfileImage());
+        }
+
+        // Xóa người dùng
+        userRepository.delete(user);
+    }
 }

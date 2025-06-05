@@ -181,4 +181,38 @@ public class UserController {
         UserResponse newUser = userService.addUser(userRequest);
         return ApiResponse.success(newUser, "User added successfully");
     }
+
+    /**
+     * API cập nhật thông tin người dùng (chỉ dành cho quản trị viên)
+     *
+     * @param id          ID của người dùng cần cập nhật
+     * @param userRequest Thông tin người dùng mới
+     * @return Thông tin người dùng đã cập nhật
+     */
+    @PutMapping(path = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.OK)
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<UserResponse> updateUser(
+            @PathVariable Long id,
+            @ModelAttribute @Valid UserRequest userRequest
+    ) {
+        // Cập nhật thông tin người dùng
+        UserResponse updatedUser = userService.updateUser(id, userRequest);
+        return ApiResponse.success(updatedUser, "User updated successfully");
+    }
+
+    /**
+     * API xóa người dùng (chỉ dành cho quản trị viên)
+     *
+     * @param id ID của người dùng cần xóa
+     * @return Thông báo thành công
+     */
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> deleteUser(@PathVariable Long id) {
+        // Xóa người dùng
+        userService.deleteUser(id);
+        return ApiResponse.success(null, "User deleted successfully");
+    }
 }

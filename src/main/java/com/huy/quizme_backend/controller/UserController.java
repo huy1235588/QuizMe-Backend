@@ -227,10 +227,10 @@ public class UserController {
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<UserResponse> toggleUserActiveStatus(
             @PathVariable Long id,
-            @RequestParam boolean lock
+            @RequestParam boolean isActive
     ) {
         // Khoá hoặc mở khoá người dùng
-        UserResponse updatedUser = userService.toggleUserActiveStatus(id, lock);
-        return ApiResponse.success(updatedUser, lock ? "User locked successfully" : "User unlocked successfully");
+        UserResponse updatedUser = userService.toggleUserActiveStatus(id, isActive);
+        return ApiResponse.success(updatedUser, isActive ? "User locked successfully" : "User unlocked successfully");
     }
 }

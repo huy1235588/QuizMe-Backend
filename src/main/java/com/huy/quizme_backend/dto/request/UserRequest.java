@@ -1,5 +1,6 @@
 package com.huy.quizme_backend.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.huy.quizme_backend.enity.enums.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -28,10 +29,7 @@ public class UserRequest {
 
     private MultipartFile profileImage;
 
-    @NotBlank
-    @Size(max = 20)
     private Role role = Role.USER;
 
-    @NotBlank
     private boolean isActive = true;
 }

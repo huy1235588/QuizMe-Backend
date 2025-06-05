@@ -175,7 +175,7 @@ public class UserController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<UserResponse> addUser(
-            @Valid @RequestBody UserRequest userRequest
+            @ModelAttribute @Valid UserRequest userRequest
     ) {
         // Thêm người dùng mới
         UserResponse newUser = userService.addUser(userRequest);

@@ -274,9 +274,11 @@ public class UserService {
                 .isActive(userRequest.isActive()) // Gán trạng thái hoạt động
                 .build();
 
-        MultipartFile avatarFile = userRequest.getProfileImage();
+        // Lưu người dùng mới
+        User savedUser = userRepository.save(user);
 
         // Thêm ảnh đại diện nếu có
+        MultipartFile avatarFile = userRequest.getProfileImage();
         if (avatarFile != null && !avatarFile.isEmpty()) {
             // Validate file using utility
             String validationError = FileValidationUtil.getImageValidationError(avatarFile);
@@ -291,9 +293,6 @@ public class UserService {
             }
             user.setProfileImage(avatarFilename);
         }
-
-        // Lưu người dùng mới
-        User savedUser = userRepository.save(user);
 
         // Trả về thông tin người dùng đã lưu
         return UserResponse.fromUser(savedUser, localStorageService);

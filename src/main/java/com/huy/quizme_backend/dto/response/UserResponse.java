@@ -1,5 +1,6 @@
 package com.huy.quizme_backend.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.huy.quizme_backend.enity.enums.Role;
 import com.huy.quizme_backend.enity.User;
 import com.huy.quizme_backend.service.LocalStorageService;
@@ -22,6 +23,7 @@ public class UserResponse {
     private String updatedAt;
     private String lastLogin;
     private Role role;
+    @JsonProperty("isActive")
     private boolean isActive;
 
     // Map từ User entity sang UserResponse DTO

@@ -1,6 +1,7 @@
 package com.huy.quizme_backend.controller;
 
 import com.huy.quizme_backend.dto.response.ApiResponse;
+import com.huy.quizme_backend.dto.response.PageResponse;
 import com.huy.quizme_backend.dto.response.UserProfileResponse;
 import com.huy.quizme_backend.dto.response.UserResponse;
 import com.huy.quizme_backend.enity.User;
@@ -67,6 +68,29 @@ public class UserController {
         Map<String, Long> response = new HashMap<>();
         response.put("count", count);
         return ApiResponse.success(response, "User count retrieved successfully");
+    }
+
+    /**
+     * API lấy danh sách người dùng theo phân trang và lọc
+     *
+     * @param page     Số trang (bắt đầu từ 0)
+     * @param pageSize Số lượng kết quả mỗi trang
+     * @param search   Từ khóa tìm kiếm theo tên hoặc username
+     * @param sort     Cách sắp xếp kết quả (newest, oldest, name, username)
+     * @return Danh sách người dùng theo trang
+     */
+    @GetMapping("/paged")
+    @ResponseStatus(HttpStatus.OK)
+    public ApiResponse<PageResponse<UserResponse>> getPagedUsers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String sort) {
+
+        PageResponse<UserResponse> pagedUsers = userService.getPagedUsers(
+                page, pageSize, search, sort);
+
+        return ApiResponse.success(pagedUsers, "Paged users retrieved successfully");
     }
 
     /**

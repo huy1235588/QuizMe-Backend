@@ -1,10 +1,15 @@
 package com.huy.quizme_backend.service;
 
+import com.huy.quizme_backend.dto.response.PageResponse;
 import com.huy.quizme_backend.dto.response.UserProfileResponse;
 import com.huy.quizme_backend.dto.response.UserResponse;
 import com.huy.quizme_backend.enity.User;
 import com.huy.quizme_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -53,6 +58,61 @@ public class UserService {
      */
     public long countUsers() {
         return userRepository.count();
+    }
+
+    /**
+     * Lấy danh sách người dùng theo trang với các tùy chọn lọc và sắp xếp
+     *
+     * @param page     Số trang (bắt đầu từ 0)
+     * @param pageSize Số lượng kết quả mỗi trang
+     * @param search   Từ khóa tìm kiếm theo tên hoặc username
+     * @param sort     Cách sắp xếp kết quả (newest, oldest, name, username)
+     * @return Danh sách người dùng theo trang
+     */
+    public PageResponse<UserResponse> getPagedUsers(
+            int page,
+            int pageSize,
+            String search,
+            String sort) {
+
+        Pageable pageable;
+
+        // Xử lý sắp xếp
+        if (sort != null) {
+            pageable = switch (sort) {
+                case "newest" -> PageRequest.of(page, pageSize, Sort.by("createdAt").descending());
+                case "oldest" -> PageRequest.of(page, pageSize, Sort.by("createdAt").ascending());
+                case "name" -> PageRequest.of(page, pageSize, Sort.by("fullName").ascending());
+                case "username" -> PageRequest.of(page, pageSize, Sort.by("username").ascending());
+                default -> PageRequest.of(page, pageSize, Sort.by("createdAt").descending());
+            };
+        } else {
+            pageable = PageRequest.of(page, pageSize, Sort.by("createdAt").descending());
+        }
+
+        Page<User> userPage;
+
+        // Xử lý tìm kiếm
+        if (search != null && !search.trim().isEmpty()) {
+            userPage = userRepository.findByUsernameContainingIgnoreCaseOrFullNameContainingIgnoreCase(
+                    search.trim(), search.trim(), pageable);
+        } else {
+            userPage = userRepository.findAll(pageable);
+        }
+
+        List<UserResponse> userResponses = userPage.getContent()
+                .stream()
+                .map(user -> UserResponse.fromUser(user, localStorageService))
+                .collect(Collectors.toList());
+
+        return PageResponse.<UserResponse>builder()
+                .content(userResponses)
+                .pageNumber(userPage.getNumber())
+                .pageSize(userPage.getSize())
+                .totalElements(userPage.getTotalElements())
+                .totalPages(userPage.getTotalPages())
+                .last(userPage.isLast())
+                .build();
     }
 
     /**

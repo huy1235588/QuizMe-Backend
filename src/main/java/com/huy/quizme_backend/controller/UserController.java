@@ -215,4 +215,22 @@ public class UserController {
         userService.deleteUser(id);
         return ApiResponse.success(null, "User deleted successfully");
     }
+
+    /**
+     * Khoá hoặc mở khoá người dùng (chỉ dành cho quản trị viên)
+     *
+     * @param id ID của người dùng cần khoá hoặc mở khoá
+     * @return Thông tin người dùng đã cập nhật
+     */
+    @PutMapping("/{id}/lock")
+    @ResponseStatus(HttpStatus.OK)
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<UserResponse> toggleUserActiveStatus(
+            @PathVariable Long id,
+            @RequestParam boolean lock
+    ) {
+        // Khoá hoặc mở khoá người dùng
+        UserResponse updatedUser = userService.toggleUserActiveStatus(id, lock);
+        return ApiResponse.success(updatedUser, lock ? "User locked successfully" : "User unlocked successfully");
+    }
 }

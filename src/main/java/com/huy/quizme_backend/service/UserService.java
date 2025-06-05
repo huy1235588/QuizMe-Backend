@@ -369,4 +369,24 @@ public class UserService {
         // Xóa người dùng
         userRepository.delete(user);
     }
+
+    /**
+     * Khóa hoặc mở khóa người dùng theo ID
+     *
+     * @param userId ID của người dùng cần khóa hoặc mở khóa
+     * @return Thông tin người dùng đã cập nhật
+     */
+    @Transactional
+    public UserResponse toggleUserActiveStatus(Long userId, boolean isActive) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found with id: " + userId));
+
+        // Chuyển đổi trạng thái hoạt động
+        user.setActive(isActive);
+
+        // Lưu người dùng đã cập nhật
+        User savedUser = userRepository.save(user);
+
+        return UserResponse.fromUser(savedUser, localStorageService);
+    }
 }

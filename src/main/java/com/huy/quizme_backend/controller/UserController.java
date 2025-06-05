@@ -11,6 +11,8 @@ import com.huy.quizme_backend.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -166,21 +168,15 @@ public class UserController {
     /**
      * API thêm người dùng mới (chỉ dành cho quản trị viên)
      *
-     * @param currentUser Người dùng hiện tại (quản trị viên)
      * @param userRequest Thông tin người dùng mới
      * @return Thông tin người dùng đã thêm
      */
-    @PostMapping("/create")
+    @PostMapping(path = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<UserResponse> addUser(
-            @AuthenticationPrincipal User currentUser,
             @Valid @RequestBody UserRequest userRequest
     ) {
-        // Kiểm tra quyền của người dùng hiện tại
-        if (currentUser == null || !currentUser.getRole().equals(Role.ADMIN)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to add users");
-        }
-
         // Thêm người dùng mới
         UserResponse newUser = userService.addUser(userRequest);
         return ApiResponse.success(newUser, "User added successfully");

@@ -19,8 +19,6 @@ public class UserRequest {
     @Size(max = 100)
     private String email;
 
-    @NotBlank
-    @Size(min = 2, max = 100)
     private String password;
 
     @NotBlank
